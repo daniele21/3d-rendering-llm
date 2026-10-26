@@ -35,12 +35,15 @@ print(json.dumps(report, indent=2))
 PY
 
 # G0 is a deliberate boundary: docs-only validation is NOT a Blender demo.
-# Once pyproject.toml exists, a real G0 showcase is mandatory and must fail closed.
+# After pyproject.toml appears, only an actual G0 Blender showcase can pass this lane.
 if [[ -f pyproject.toml ]]; then
-  command -v uv >/dev/null || { echo "::error::uv required for Geometry Harness" >&2; exit 127; }
-  command -v blender >/dev/null || { echo "::error::Blender required for Geometry Harness G0" >&2; exit 127; }
-  uv run --frozen geometry showcase --milestone G0 --output ci-artifacts/showcase/g0
-  uv run --frozen geometry showcase validate ci-artifacts/showcase/g0
+  export PYTHONPATH="$PWD/src"
+  python3 -m geometry_harness doctor
+  python3 -m unittest discover -s tests -p 'test_g0_contract.py' -v
+  GEOMETRY_SHOWCASE_DIR="$PWD/ci-artifacts/showcase/g0" \
+    python3 -m unittest discover -s tests/e2e -p 'test_showcase_g0.py' -v
+  python3 -m geometry_harness showcase validate ci-artifacts/showcase/g0
+  echo "G0 verified on real Blender; outputs in ci-artifacts/showcase/g0."
   exit 0
 fi
 
