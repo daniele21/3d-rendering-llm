@@ -34,6 +34,8 @@ Prompt/spec -> ProviderAdapter (cloud agent/LLM or local open-weight LLM)
 
 ## Rendering and validation
 
+Every milestone's real Blender/model/MCP E2E must publish a reviewable PNG contact sheet, offline HTML gallery, manifest, objective assertions, native scene and negative-path evidence; see [showcase and evidence contract](features/showcase-evidence.md). Gallery/report generation is a G0 concern reused by all later vertical slices, not a final-phase add-on.
+
 Blender preview (fast neutral materials and fixed orthographic/isometric cameras) is the primary early feedback surface. Production quality renders with Cycles and richer materials are a *later option*, not the first dependency.
 
 Order: syntax/runtime -> Blender build/load -> deterministic object geometry (dimensions, expected parts, gaps/contacts when specified) -> cheap multi-view preview -> optional VLM rubric -> bounded repair. Keep subjective appearance separate from geometric correctness. VLM receives spec, render and measurements but not the generator's private reasoning.
