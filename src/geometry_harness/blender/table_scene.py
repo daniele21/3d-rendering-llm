@@ -48,7 +48,8 @@ def build(folder):
     scene.render.resolution_y = 600
     scene.render.resolution_percentage = 100
     scene.render.image_settings.file_format = "PNG"
-    scene.render.filepath = str(folder / "preview.png")
+    # Portable Blender-relative path: preview stays beside scene.blend after export.
+    scene.render.filepath = "//preview.png"
     bpy.ops.wm.save_as_mainfile(filepath=str(folder / "scene.blend"))
     bpy.ops.render.render(write_still=True)
 
