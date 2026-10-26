@@ -43,7 +43,7 @@ See [proposed architecture](../architecture.md): model-independent agent; code-f
 
 ## Vertical milestone contract
 
-Every milestone must have (a) one user-visible story, (b) a fast executable demo, (c) saved output, (d) automated acceptance and failure case, (e) docs explaining how to reproduce, and (f) explicit remaining gaps. The commands below are **planned CLI contracts, not implemented commands**. Use a single small golden fixture (simple table: top + four legs, dimensions, stable object names, neutral material) throughout early slices.
+**Showcase gate for G0–G8:** implement the real per-stage `tests/e2e/test_showcase_gX.py` specified in [showcase evidence contract](../features/showcase-evidence.md). Every test must **generate and publish** inspectable PNG/contact sheet + offline gallery + manifest + native files, assert meaningful behavior and test a failure path. Missing or mocked deliverables do not complete a milestone. Commands below are **proposed, not implemented**. Reuse a stable four-leg table fixture initially.
 
 | Slice | Immediately tangible result | Planned user demo | Gate / definition of done | Depends | State |
 | --- | --- | --- | --- | --- | --- |
@@ -82,7 +82,7 @@ Every milestone must have (a) one user-visible story, (b) a fast executable demo
 2. Build only a deterministic tabletop + four-leg Blender fixture; use explicit metric units, object naming, camera/light, fixed preview settings and an isolated output directory.
 3. Provide native install/doctor/demo/check/test commands with no cloud or model dependency. One command must produce preview.png, scene.blend and manifest.json.
 4. Test open/re-save, count/names, bounds/contacts, missing Blender error, timeout and cleanup; run on local Apple Silicon or repository-owned automated macOS runner when available.
-5. Review one image and the source/manifest in the milestone PR. **First user-visible payoff: a real .blend and PNG from a clean setup.**
+5. Implement `tests/e2e/test_showcase_g0.py`: a real Blender run emits `index.html`, `contact-sheet.png`, `assertions.json`, `preview.png`, `scene.blend`, `showcase-manifest.json`; validate hashes/reopen and upload artifacts to Actions (even on failure). Review the image in PR.
 
 **G0 acceptance evidence (to collect, not already present):** exact SHA, Blender/python versions, reproducible CLI transcript, generated preview PNG, file-open validation, focused tests and automated integration preflight. If macOS rendering cannot be automated yet, label missing hardware verification and do not call it release-ready.
 
@@ -98,7 +98,7 @@ Every milestone must have (a) one user-visible story, (b) a fast executable demo
 - Confirmed: repository currently contains repo-template-sw distribution and copied adopter templates, not a specialized Geometry Harness app; only main branch existed at planning time.
 - Confirmed upstream: 3DCodeVerse includes code-first agentic pipeline; dcc-mcp-blender and dcc-mcp-core expose typed Blender MCP tooling; integration, macOS compatibility and performance **not yet tested in this repository**.
 - Unresolved: exact upstream SHAs/version matrix; first closed vendor/model; chosen local model/VLM; precise resource and quality budgets. None blocks G0.
-- Next: implement G0 only, produce and inspect the very first deterministic PNG and .blend, then proceed to G1.
+- Next: implement G0 + its real showcase test/evidence publisher; inspect the PNG and reopen the .blend before G1.
 
 ## Durable destinations and lifecycle
 
