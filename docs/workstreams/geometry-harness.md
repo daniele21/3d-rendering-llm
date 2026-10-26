@@ -9,16 +9,14 @@ State: **planning only**. No milestone is implemented or validated by this docum
 
 ## Product intent
 
-- **User:** developer/maker creating and iterating on real 3D assets using AI, first on Apple Silicon.
-- **Job:** turn a text request into an inspectable, editable Blender scene, render it, correct errors, compare agents, and eventually run it without remote inference.
-- **Desired outcome:** each release produces a tangible artifact and a repeatable demo; models and generation strategies are interchangeable without replacing the scene, renderer or evaluator.
-- **Value risks:** better prompts or existing Blender MCP may already solve simple cases; test quality and incremental editing before expanding.
-- **Usability risks:** terminal-only results are hard to inspect; publish PNG previews and a simple local gallery before a complex editor.
-- **Feasibility risks:** macOS/ARM64 compatibility, MCP state vs code-as-truth, VLM effectiveness, local model tool use, memory/runtime/cost.
-- **Viability risks:** inherited template overhead, upstream churn, transitive licenses, nondeterministic renders, API spend and asset sizes.
-- **Assumptions to falsify:** (A1) 3DCodeVerse pipeline can run with practical macOS adaptations; (A2) dcc-mcp-blender can edit the resulting saved scene through a stable bridge; (A3) feedback improves acceptance enough to justify added inference; (A4) open-weight models can complete the same elementary tasks within available local memory.
-- **Evidence:** staged demos, automated E2E, per-run cost/latency/geometry reports and a fixed comparison suite. No superiority claims without measurements.
-- **Post-release learning:** which users/tasks benefit from agentic repair and whether local privacy/low marginal cost compensates for quality and latency gaps.
+- Product depth: PRODUCT_STRATEGIC. Primary user: maker/developer on Apple Silicon.
+- Problem: create an editable, verifiable Blender scene from text, then revise it without rebuilding by hand.
+- Desired outcome: visible, repeatable and measured artifact per milestone; closed-provider baseline, then fully offline open-weight inference.
+- Risks: effectiveness vs direct Blender MCP; Mac compatibility; code/MCP replay; VLM quality; local memory and licences.
+- Assumptions to verify: 3DCodeVerse ports to Mac; MCP edits bridge reliably; feedback helps; local LLM completes basic tasks.
+- Success evidence: E2E artifact acceptance, edit preservation, cost/latency/quality reports, no-egress local run.
+- Post-release: when is agentic repair more valuable than direct tool calls?
+- Durable source: [product.md](../product.md).
 
 ## Decision and boundaries
 
@@ -30,33 +28,18 @@ Explicit non-goals for early slices: photorealistic cinematic scenes, large envi
 
 ## Delivery principles / invariants
 
-1. **Visible first:** each slice ships one documented command, a screenshot/PNG, a native .blend where meaningful and an inspectable per-run directory. Show the output even if a later step is blocked.
-2. **One source of truth per execution mode:** code-first = source + dependencies; tool-first = initial snapshot + typed operation journal; hybrid = source/snapshot + replayable patch sequence. Never claim reproducibility from a final screenshot alone.
-3. **Never silently overwrite a successful artifact.** Each run/revision has a unique ID; checkpoint before state mutation; rollback and replay are tested before promoting hybrid.
-4. **Providers are behind narrow interfaces.** Closed APIs and vendor CLIs are temporary experiment adapters; no renderer/test/eval code may depend on a vendor-specific message format. Local runtime must not require a cloud account.
-5. **Separate objective and subjective verification.** Geometry measurements and execution gates precede VLM judgement. A visual score does not certify mesh validity, dimensional accuracy or manufacturing readiness.
-6. **Safe execution:** generated bpy code is untrusted; isolated work directory/process, bounded time/memory/iterations, disabled network where supported, secrets outside logs, owned process cleanup, and no arbitrary writes outside workspace.
-7. **Offline is a tested property**, not merely a local endpoint: models, textures and assets pre-cached; no outgoing requests; remote fallbacks forbidden in local profile.
-8. **Cheap feedback first:** deterministic smoke/format/unit tests during iteration; full affected E2E at integration; real-device GPU/render evidence before release. No heavy render suite on every commit.
-9. **Upstream hygiene:** pin SHAs/versions, keep attribution/license inventory, avoid copying large code trees, track deviations in an ADR; verify licensing for code, Blender extension builds, models and datasets independently.
-10. **Local-only large artifacts:** do not commit generated .blend/GLB/PNG, model weights, eval caches or full raw transcripts; store manifests/small fixtures in Git and run outputs in ignored directories or bounded CI artifacts.
+1. Every slice provides a runnable command, PNG, .blend when relevant, manifest and tests; never infrastructure alone.
+2. Code truth = source; MCP truth = snapshot + typed journal; hybrid = source/snapshot + replayable patches.
+3. Stable IDs, immutable accepted artifacts, checkpoint/rollback and verified replay; detect divergence.
+4. Vendor logic never enters geometry/render/evals. Offline = no credentials, network, or cloud fallback.
+5. Deterministic geometry checks before subjective VLM; preserve failures and UNKNOWN.
+6. Sandbox generated code, bound memory/time/cost and clean owned processes on exit.
+7. Pin upstream + notices; check code, datasets, packages, models and assets separately.
+8. Keep heavy runs, weights and generated files out of Git.
 
-## Architecture direction (interfaces, not premature implementations)
+## Architecture direction
 
-User prompt/spec -> ProviderAdapter (planner / generator / visual judge, cloud or local)
--> AgentOrchestrator -> ExecutionStrategy (code_first | tool_first | hybrid)
--> BlenderSession (headless build / MCP live edits)
--> DeterministicValidator -> Render(multiview preview / final)
--> VisualJudge (optional) -> RevisionStore + RunManifest -> CLI/gallery/export.
-
-Contracts to introduce only when first consumed:
-- SceneArtifact: run_id, source hash, Blender version, native scene path, render paths, exports, dependency/model metadata.
-- ToolAction: idempotency key, target stable object ID, typed args, preconditions, postconditions, result, revision ID.
-- ValidationReport: execution/geometry/spatial/visual checks with independent PASS/FAIL/UNKNOWN and evidence paths.
-- AgentAdapter: structured messages, tool invocations, image input, usage/cost, cancellation; capabilities negotiated rather than assumed.
-- ExecutionBudget: iteration, tool, wall-time, model tokens/cost ceilings configurable by profile.
-
-Source integrations to audit: https://github.com/gaoypeng/3dcodeverse (Apache-2.0 code), https://github.com/dcc-mcp/dcc-mcp-blender (MIT source), https://github.com/dcc-mcp/dcc-mcp-core (MIT source). License of particular extension packages, datasets/models and assets must be checked separately. Choose pinned revisions only after integration smoke.
+See [proposed architecture](../architecture.md): model-independent agent; code-first (3DCodeVerse), typed MCP (dcc-mcp-blender/core), hybrid revision ledger, deterministic validation and optional visual judge. All are proposed, not yet tested. Pin upstream revisions only after smoke; track licences/notices.
 
 ## Vertical milestone contract
 
@@ -64,15 +47,15 @@ Every milestone must have (a) one user-visible story, (b) a fast executable demo
 
 | Slice | Immediately tangible result | Planned user demo | Gate / definition of done | Depends | State |
 | --- | --- | --- | --- | --- | --- |
-| G0 — Boot + first render | A real table .blend and preview.png without AI | geometry demo deterministic-table | Fresh Mac runs doctor, renders PNG, saves/open-checks .blend, validates 5 named objects/bounds and cleans owned processes; template is specialized | — | READY |
-| G1 — First closed-AI creation | A prompt creates a chair/table scene and image | geometry run --profile cloud --mode code --prompt-file examples/table.txt | Model script runs in Blender, output PNG/.blend/manifest saved, errors bounded and actionable; no MCP needed yet | G0 | BLOCKED |
-| G2 — See and correct | Four views + geometry report + visible first/last comparison | geometry run --profile cloud --feedback geometric-visual | Script/runtime, dimensions, object count and contact gates; judge consumes only spec/renders/measurements; repair retry bounded; store every round, including failure | G1 | BLOCKED |
-| G3 — Edit with MCP | User asks to recolor or raise only one object, and sees before/after | geometry edit <run> --prompt "Change the tabletop to blue" | dcc tool discovery+invocation, state inspect/edit/save, no unintended object transform, real Blender round-trip and typed error handling | G1 (G2 can progress in parallel) | BLOCKED |
-| G4 — Hybrid + undo | Original and edited scenes coexist; rollback recovers original | geometry revisions <run>; geometry rollback <run> <revision> | Stable IDs, journal/checkpoint/replay; new process can regenerate edited revision; undo returns original bounds/material; source-vs-session divergence detected | G2,G3 | BLOCKED |
-| G5 — Compare agents | Human-readable gallery/report for identical prompts across GPT/Claude/Gemini and 3 strategies | geometry benchmark --suite fixtures/core --profiles cloud | Same fixed tasks/budgets, pinned tool versions, success/geometry/visual/latency/cost; blind sampled assessment; no ungrounded single overall score | G4 | BLOCKED |
-| G6 — Local generator | First open-weight model produces the same editable table on the Mac | geometry run --profile local --mode code --prompt-file examples/table.txt | Local endpoint/runtime, deterministic geometry gates, latency and peak memory logged; works without closed API keys; honest quality comparison with G5 | G1 (parallel with G3–G5) | BLOCKED |
-| G7 — Fully local loop | Prompt → local LLM → local VLM judge → repaired render, entirely offline | geometry run --profile local --feedback geometric-visual --offline | Controlled no-egress E2E with cached weights/assets, no vendor API calls, graceful VLM unavailable path, bounded resource usage and equivalent manifest | G2,G4,G6 | BLOCKED |
-| G8 — Practical rendering workflow | User picks scene/revision, chooses preview vs final Cycles render, inspects gallery | geometry render <run> --quality final; geometry gallery <run> | Usable images, named camera/light/material controls, exports, consistent project re-open, gallery navigation and UI evidence; compare preview/final cost | G4,G5 (local path remains optional until G7) | BLOCKED |
+| G0 — Boot + render | .blend + PNG of deterministic 4-leg table, no AI | geometry demo deterministic-table | Fresh setup and doctor; open/re-check 5 objects, dimensions, manifest, timeout cleanup | — | READY |
+| G1 — AI creation | Text request -> first AI-rendered object | geometry run --profile cloud --mode code | Script + PNG/.blend/manifest saved; failures bounded; no MCP yet | G0 | BLOCKED |
+| G2 — Repair loop | Four views and before/after report | geometry run --feedback geometric-visual | Geometry gates + optional independent judge + bounded retry and round evidence | G1 | BLOCKED |
+| G3 — Typed MCP edit | Recolor only tabletop, see before/after | geometry edit RUN --prompt "Blue tabletop" | Real dcc-mcp Blender edit, save/reopen and unchanged other transforms | G1 (parallel with G2) | BLOCKED |
+| G4 — Hybrid + rollback | Versions and lossless restoration | geometry rollback RUN REV | Stable IDs, action journal, replay/new-process verification and rollback | G2,G3 | BLOCKED |
+| G5 — Agent comparisons | Per-model/strategy gallery and report | geometry benchmark --suite fixtures/core | Fixed prompts/budgets, valid-scene metrics, time/cost and manual spot checks | G4 | BLOCKED |
+| G6 — Local code generation | Same table generated by local open-weight model | geometry run --profile local --mode code | No API keys; output validated; peak memory/latency compared with G5 | G1 (parallel with G3–G5) | BLOCKED |
+| G7 — Full local loop | Local LLM/VLM creates, judges and repairs offline | geometry run --profile local --offline | Controlled no-egress E2E, cached models and fail-closed optional visual judge | G2,G4,G6 | BLOCKED |
+| G8 — Final render workflow | Cycles render and revisable gallery | geometry render RUN --quality final; geometry gallery RUN | Output reopened; preview/final comparison; functional visual review | G4,G5 | BLOCKED |
 
 ### Implementation tasks, ownership and parallel work
 
@@ -103,14 +86,11 @@ Every milestone must have (a) one user-visible story, (b) a fast executable demo
 
 **G0 acceptance evidence (to collect, not already present):** exact SHA, Blender/python versions, reproducible CLI transcript, generated preview PNG, file-open validation, focused tests and automated integration preflight. If macOS rendering cannot be automated yet, label missing hardware verification and do not call it release-ready.
 
-## Cross-cutting test and decision protocol
+## Cross-cutting validation
 
-- Each later slice retains prior goldens (create → save → reopen → edit → reopen → compare); immutable finished revisions and deterministic scene measurements gate regressions.
-- Suggested fixed starter suite: box/cylinder, 4-leg table, simple chair, two-object scene, tabletop color edit, leg-height edit, intentional malformed script, intentional disconnected leg. Expand to benchmark datasets only after runner accuracy is proven.
-- First A/B: code-first no feedback vs geometric feedback vs geometric+visual; then code-first vs typed MCP vs hybrid. Report cost per **valid** scene, pass rate, wall time, tool failures, revision preservation and visual rubric separately.
-- Pin prompt/model/temperature/tool+Blender versions, camera seeds and sample budgets; preserve runs even when failed. Visual judge scores are probabilistic; reference renders and manual spot checks remain necessary.
-- Promotion thresholds are chosen from baseline evidence, not invented ahead of measurement. Treat Mac 36-GB-class memory as an experimental budget, not a guarantee that all local VLMs coexist; load/unload roles serially where necessary.
-- Release checks: unit/contract + integration Blender run + artifact reopen + focused E2E + security/no-egress for local profile + cleanup; preserve photos/video for material gallery UI critical journeys when introduced.
+- Fixed suite: cube, table, chair, material edit, geometry edit, malformed script, disconnected leg.
+- Compare code/typed/hybrid with equal prompts, budgets and tool versions; report acceptance, geometry, preservation, latency, cost/valid result and visual rubric separately.
+- Cheap checks during iteration; affected Blender E2E at integration; hardware/offline/UI-media evidence at release. Calibrate quality thresholds from the baseline, not guesses.
 
 ## Resume checkpoint
 
