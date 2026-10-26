@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Executed ONLY by daniele21/local-runner-infra on an explicitly trusted, exact SHA.
+# Repository-owned validation. No downloads, secrets or cloud-model calls.
+if [[ "$(uname -s)" != "Darwin" || "$(uname -m)" != "arm64" ]]; then
+  echo "::error::Geometry Harness local lane requires macOS ARM64 (Mac mini)" >&2
+  exit 2
+fi
+
+mkdir -p .ci-artifacts/showcase
+python3 - <<'PY'
+import json
+import os
+import pathlib
+import platform
+import shutil
+from datetime import datetime, timezone
+
+out = pathlib.Path(".ci-artifacts/showcase")
+report = {
+    "evidence_type": "runner_preflight_only",
+    "geometry_demo_executed": False,
+    "source_repo": os.environ.get("SOURCE_REPO", "unknown"),
+    "source_sha": os.environ.get("SOURCE_SHA", "unknown"),
+    "runner_os": platform.system(),
+    "runner_arch": platform.machine(),
+    "python": platform.python_version(),
+    "blender_on_path": bool(shutil.which("blender")),
+    "uv_on_path": bool(shutil.which("uv")),
+    "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+}
+(out / "runner-preflight.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+print(json.dumps(report, indent=2))
+PY
+
+# G0 is a deliberate boundary: docs-only validation is NOT a Blender demo.
+# Once pyproject.toml exists, a real G0 showcase is mandatory and must fail closed.
+if [[ -f pyproject.toml ]]; then
+  command -v uv >/dev/null || { echo "::error::uv required for Geometry Harness" >&2; exit 127; }
+  command -v blender >/dev/null || { echo "::error::Blender required for Geometry Harness G0" >&2; exit 127; }
+  uv run --frozen geometry showcase --milestone G0 --output .ci-artifacts/showcase/g0
+  uv run --frozen geometry showcase validate .ci-artifacts/showcase/g0
+  exit 0
+fi
+
+# Current source is still the repo-template-sw distribution. Validate it as such;
+# do not pretend a 3D app or actual milestone showcase has been executed.
+python3 template/scripts/verify_repository.py --root template --template-mode
+python3 template/scripts/verify_operations.py --root template --template-mode
+python3 template/scripts/verify_validation_cadence.py --root template --template-mode
+python3 template/scripts/verify_e2e.py --root template --template-mode
+python3 template/scripts/verify_stage_environment_policy.py --root template --template-mode
+python3 template/scripts/verify_infrastructure.py --root template --template-mode
+python3 template/scripts/verify_product_development.py --root template --template-mode
+python3 template/scripts/verify_product_experience.py --root template --template-mode
+python3 template/scripts/verify_docs.py --root template --template-mode
+python3 template/scripts/verify_agent_context.py --root template --template-mode
+python3 -m unittest discover -s tests -v
+python3 -m py_compile template/scripts/*.py
+echo "Preflight complete: engineering template checks only. No G0 geometry milestone claimed."
