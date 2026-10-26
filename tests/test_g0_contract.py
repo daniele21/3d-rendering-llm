@@ -2,11 +2,12 @@
 import os
 from pathlib import Path
 import struct
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
 from geometry_harness.cli import (
-    ShowcaseError, blender_binary, create_g0, png_dimensions, validate,
+    ShowcaseError, create_g0, png_dimensions, run_blender, validate,
 )
 
 
@@ -29,6 +30,15 @@ class ContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             with self.assertRaisesRegex(ShowcaseError, "Missing showcase manifest"):
                 validate(Path(temp))
+
+    def test_timeout_terminates_process(self):
+        with tempfile.TemporaryDirectory() as temp:
+            with self.assertRaisesRegex(ShowcaseError, "Blender timeout"):
+                run_blender(
+                    [sys.executable, "-c", "import time; time.sleep(5)"],
+                    Path(temp) / "timeout.log",
+                    seconds=0.05,
+                )
 
     def test_png_dimensions(self):
         with tempfile.TemporaryDirectory() as temp:
