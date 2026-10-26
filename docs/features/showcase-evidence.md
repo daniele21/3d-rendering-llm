@@ -34,7 +34,7 @@ showcase/
 
 ### Planned commands and ownership
 
-At G0 introduce native `geometry showcase --milestone G0 --output runs/...`, `geometry showcase validate PATH`, and a fixture-driven E2E test. Names are *intended interfaces*, not functioning commands today. Each later milestone adds its case to the same runner. `geometry showcase --milestone Gx --open` should build/open the static gallery and optionally open the native .blend in Blender; no web hosting required.
+At G0 introduce native `geometry showcase --milestone G0 --output ci-artifacts/showcase/g0`, `geometry showcase validate PATH`, and a fixture-driven E2E test. Names are *intended interfaces*, not functioning commands today. Each later milestone adds its case to the same runner. `geometry showcase --milestone Gx --open` should build/open the static gallery and optionally open the native .blend in Blender; no web hosting required.
 
 Expected test hierarchy: `tests/unit/` for manifest/writer/hashes, `tests/integration/` for Blender and MCP contracts, and `tests/e2e/test_showcase_gX.py` for the real representative user path. Add a negative case per milestone (same test file or companion) proving a distinct failure signal.
 
@@ -57,11 +57,11 @@ All test paths below are **planned** and become real when that milestone is impl
 ## Validation layers and CI publication
 
 - **Fast checks (every touched change):** schemas, file/manifest integrity, deterministic geometry helpers, mocked provider protocol and small local fixtures; no remote model billing.
-- **Integration/PR-ready:** real Blender headless E2E for the currently changed milestone and affected prior goldens on a compatible macOS ARM64 runner; use the repository's available self-hosted Mac runners when verified. Record exact SHA and environment. Check generated image + scene + manifest together.
+- **Integration/PR-ready:** execute the source-owned `.github/ci/local-test.sh` from an exact trusted SHA via `daniele21/local-runner-infra` on `[self-hosted, macOS, ARM64, local-shared]`. These runners are *central-repository scoped*; do not set source `runs-on: self-hosted`. Confirm real Blender E2E for changed milestone and affected prior goldens, with source SHA and environment.
 - **Cloud experiments (G1/G2/G5):** workflow_dispatch/manual or explicitly authorized cost-bounded CI with provider secrets gated and unavailable to untrusted change branches. Not part of every push; no passing claim from a mocked provider.
 - **Local AI (G6/G7):** dedicated appropriately provisioned self-hosted Mac with locally cached models. Record peak memory, inference duration and verified offline evidence; do not treat ordinary hosted CPU job as representative.
 - **UI (G8):** screenshots plus continuous critical-journey video where required by the inherited product UI contract; CI artifacts preserve it.
-- **Publish:** an Actions job uploads the `showcase/` directory with `if: always()`, short bounded retention (target seven days) and a link in the PR checks/summary; optional first-image contact sheet in a PR comment if permissions safely allow it. Do not embed binary render files or model weights in Git.
+- **Publish:** the central Actions workflow uploads `ci-artifacts/showcase/` via `actions/upload-artifact@v4` even on a failed test, when files exist, with seven-day retention. Follow central run link from source `local-ci/mac` status and download `geometry-showcase-<run-id>`. This is not a source-repository artifact; no Git binary render commits.
 - **Retention:** Git retains small task fixtures/schema/tests; local or CI artifact store retains immutable run bundles temporarily; optional promoted reference examples may be published as versioned release assets after validation and provenance review.
 - **Review ritual:** open `index.html` or `contact-sheet.png`, inspect renders visually, read objective checks, open `scene.blend` when needed, and compare to prior milestone. Automated success alone never attests to artistic quality.
 
