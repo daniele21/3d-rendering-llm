@@ -47,7 +47,7 @@ See [proposed architecture](../architecture.md): model-independent agent; code-f
 
 | Slice | Immediately tangible result | Planned user demo | Gate / definition of done | Depends | State |
 | --- | --- | --- | --- | --- | --- |
-| G0 — Boot + render | .blend + PNG of deterministic 4-leg table, no AI | geometry demo deterministic-table | Fresh setup and doctor; open/re-check 5 objects, dimensions, manifest, timeout cleanup | — | READY |
+| G0 — Boot + render | .blend + PNG of deterministic 4-leg table, no AI | geometry showcase --milestone G0 | Fresh setup and doctor; open/re-check 5 objects, dimensions, manifest, timeout cleanup | — | ACTIVE |
 | G1 — AI creation | Text request -> first AI-rendered object | geometry run --profile cloud --mode code | Script + PNG/.blend/manifest saved; failures bounded; no MCP yet | G0 | BLOCKED |
 | G2 — Repair loop | Four views and before/after report | geometry run --feedback geometric-visual | Geometry gates + optional independent judge + bounded retry and round evidence | G1 | BLOCKED |
 | G3 — Typed MCP edit | Recolor only tabletop, see before/after | geometry edit RUN --prompt "Blue tabletop" | Real dcc-mcp Blender edit, save/reopen and unchanged other transforms | G1 (parallel with G2) | BLOCKED |
@@ -98,7 +98,7 @@ See [proposed architecture](../architecture.md): model-independent agent; code-f
 - Confirmed: repository currently contains repo-template-sw distribution and copied adopter templates, not a specialized Geometry Harness app; only main branch existed at planning time.
 - Confirmed upstream: 3DCodeVerse includes code-first agentic pipeline; dcc-mcp-blender and dcc-mcp-core expose typed Blender MCP tooling; integration, macOS compatibility and performance **not yet tested in this repository**.
 - Unresolved: exact upstream SHAs/version matrix; first closed vendor/model; chosen local model/VLM; precise resource and quality budgets. None blocks G0.
-- Next: implement G0 + its real showcase test/evidence publisher; inspect the PNG and reopen the .blend before G1.
+- Next: validate G0 on actual Mac mini runner; inspect contact sheet and reopen .blend, then mark DONE only after passing CI artifacts.
 
 ## Durable destinations and lifecycle
 
