@@ -8,7 +8,7 @@ if [[ "$(uname -s)" != "Darwin" || "$(uname -m)" != "arm64" ]]; then
   exit 2
 fi
 
-mkdir -p .ci-artifacts/showcase
+mkdir -p ci-artifacts/showcase
 python3 - <<'PY'
 import json
 import os
@@ -17,7 +17,7 @@ import platform
 import shutil
 from datetime import datetime, timezone
 
-out = pathlib.Path(".ci-artifacts/showcase")
+out = pathlib.Path("ci-artifacts/showcase")
 report = {
     "evidence_type": "runner_preflight_only",
     "geometry_demo_executed": False,
@@ -39,8 +39,8 @@ PY
 if [[ -f pyproject.toml ]]; then
   command -v uv >/dev/null || { echo "::error::uv required for Geometry Harness" >&2; exit 127; }
   command -v blender >/dev/null || { echo "::error::Blender required for Geometry Harness G0" >&2; exit 127; }
-  uv run --frozen geometry showcase --milestone G0 --output .ci-artifacts/showcase/g0
-  uv run --frozen geometry showcase validate .ci-artifacts/showcase/g0
+  uv run --frozen geometry showcase --milestone G0 --output ci-artifacts/showcase/g0
+  uv run --frozen geometry showcase validate ci-artifacts/showcase/g0
   exit 0
 fi
 
