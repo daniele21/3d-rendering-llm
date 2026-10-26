@@ -15,8 +15,9 @@ G0 — Adopt the template as this project and deliver a deterministic Blender ta
 ## Repository blockers
 
 - Product repo specialization not done; current root AGENTS.md/README.md still describe repo-template-sw.
-- Upstream integration, Blender runtime and inference have not been tested in this repository. These do not block deterministic G0.
+- The Mac mini CI source script has been added to the planning branch; the central runner allowlist and artifact publishing require reviewed deployment in `local-runner-infra`. No Mac job or Blender E2E has been verified yet.
+- Upstream integration and inference remain untested; they do not block deterministic G0.
 
 ## Next
 
-Implement G0 on a feature branch; verify native Blender build, preview image and saved scene on the target Mac, then update integrated docs and promote G1. Do not mark any milestone DONE based only on this plan.
+After central allowlist onboarding and trusted-SHA CI smoke, implement G0 with a real Mac mini showcase bundle; verify native Blender, preview PNG and saved scene, then promote G1. Do not mark any milestone DONE based only on this plan.
