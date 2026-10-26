@@ -82,9 +82,9 @@ See [proposed architecture](../architecture.md): model-independent agent; code-f
 2. Build only a deterministic tabletop + four-leg Blender fixture; use explicit metric units, object naming, camera/light, fixed preview settings and an isolated output directory.
 3. Provide native install/doctor/demo/check/test commands with no cloud or model dependency. One command must produce preview.png, scene.blend and manifest.json.
 4. Test open/re-save, count/names, bounds/contacts, missing Blender error, timeout and cleanup; run on local Apple Silicon or repository-owned automated macOS runner when available.
-5. Implement `tests/e2e/test_showcase_g0.py`: a real Blender run emits `index.html`, `contact-sheet.png`, `assertions.json`, `preview.png`, `scene.blend`, `showcase-manifest.json`; validate hashes/reopen and upload artifacts to Actions (even on failure). Review the image in PR.
+5. Implement the real G0 showcase E2E: output `index.html`, contact sheet, assertions, `.blend`, preview and manifest under `ci-artifacts/showcase/`; reopen/check/hash, review in central Mac Actions artifact.
 
-**G0 acceptance evidence (to collect, not already present):** exact SHA, Blender/python versions, reproducible CLI transcript, generated preview PNG, file-open validation, focused tests and automated integration preflight. If macOS rendering cannot be automated yet, label missing hardware verification and do not call it release-ready.
+**CI routing:** `.github/ci/local-test.sh` runs on `daniele21/local-runner-infra` Mac mini via central-direct, pinned source SHA; `local-ci/mac` is authoritative. Current script is *docs-only preflight*, not G0. G0 requires real preview PNG, .blend reopen and showcase bundle; Mac availability cannot be assumed. Paid models remain manual. Details: [evidence contract](../features/showcase-evidence.md).
 
 ## Cross-cutting validation
 
