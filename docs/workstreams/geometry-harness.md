@@ -82,9 +82,9 @@ See [proposed architecture](../architecture.md): model-independent agent; code-f
 2. Build only a deterministic tabletop + four-leg Blender fixture; use explicit metric units, object naming, camera/light, fixed preview settings and an isolated output directory.
 3. Provide native install/doctor/demo/check/test commands with no cloud or model dependency. One command must produce preview.png, scene.blend and manifest.json.
 4. Test open/re-save, count/names, bounds/contacts, missing Blender error, timeout and cleanup; run on local Apple Silicon or repository-owned automated macOS runner when available.
-5. Implement the real G0 showcase E2E: output `index.html`, contact sheet, assertions, `.blend`, preview and manifest under `ci-artifacts/showcase/`; reopen/check/hash, review in central Mac Actions artifact.
+5. Implement the real G0 showcase E2E: output `index.html`, contact sheet, assertions, `.blend`, preview and manifest under `ci-artifacts/showcase/`; reopen/check/hash, persist to private GCS from the Mac mini workflow, and review the downloaded bundle.
 
-**CI routing:** `.github/ci/local-test.sh` runs on `daniele21/local-runner-infra` Mac mini via central-direct, pinned source SHA; `local-ci/mac` is authoritative. Current script is *docs-only preflight*, not G0. G0 requires real preview PNG, .blend reopen and showcase bundle; Mac availability cannot be assumed. Paid models remain manual. Details: [evidence contract](../features/showcase-evidence.md).
+**CI routing:** `.github/ci/local-test.sh` runs via central `geometry-mac-mini.yml` on a `local-mac-mini-*` runner at pinned source SHA. The G0 code exists; real Blender is still missing in verified runner preflight. G0 requires PNG, reopened .blend and a passing private GCS upload gate; source `local-ci/mac-mini` status is secondary. GCS setup is documented in central `docs/geometry-gcs-artifacts.md`. Paid models remain manual. Details: [evidence contract](../features/showcase-evidence.md).
 
 ## Cross-cutting validation
 
@@ -98,7 +98,7 @@ See [proposed architecture](../architecture.md): model-independent agent; code-f
 - Confirmed: repository currently contains repo-template-sw distribution and copied adopter templates, not a specialized Geometry Harness app; only main branch existed at planning time.
 - Confirmed upstream: 3DCodeVerse includes code-first agentic pipeline; dcc-mcp-blender and dcc-mcp-core expose typed Blender MCP tooling; integration, macOS compatibility and performance **not yet tested in this repository**.
 - Unresolved: exact upstream SHAs/version matrix; first closed vendor/model; chosen local model/VLM; precise resource and quality budgets. None blocks G0.
-- Next: validate G0 on actual Mac mini runner; inspect contact sheet and reopen .blend, then mark DONE only after passing CI artifacts.
+- Next: provision GCS/WIF, install Blender on Mac mini, rerun G0 and inspect the bucket's .blend/PNG plus SHA-256 manifest before marking DONE.
 
 ## Durable destinations and lifecycle
 
