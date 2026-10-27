@@ -23,7 +23,7 @@ The output folder must not already contain files (runs are immutable). Generated
 
 ## Mac mini CI
 
-Shared macOS self-hosted runners belong to `daniele21/local-runner-infra`; **do not add self-hosted runs-on directly in this source repo**. Only reviewed, exact-SHA execution through the central private repo can run `.github/ci/local-test.sh`. The central job uploads `ci-artifacts/showcase/` as Actions evidence. Hosted template-health CI is retained separately during initial project specialization. This runner does not automatically have permissions to post source statuses unless `CENTRAL_SOURCE_TOKEN` is authorized for this repository.
+Shared macOS runners belong to `daniele21/local-runner-infra`; **G0 must be assigned to a Mac mini**, not generic `local-mac-1`. The dedicated central `geometry-mac-mini.yml` requires the verified `geometry-mac-mini` label plus `macOS,ARM64,local-shared`, and validates the `local-mac-mini-*` runner name. The reviewed operator runs `bash scripts/request_geometry_ci.sh <trusted-SHA>` in the central repo once that label exists. The job publishes `ci-artifacts/showcase/` when GitHub artifact quota permits. Hosted template-health CI remains separate. Source status reporting requires `CENTRAL_SOURCE_TOKEN` permission for this repo.
 
 ## Planned next steps
 
