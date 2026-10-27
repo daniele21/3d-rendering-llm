@@ -1,0 +1,36 @@
+name: Geometry Harness - fast offline contracts
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    name: Python contract tests (no Blender, no network, no paid model)
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile Python sources
+        run: |
+          python -m compileall -q src tests benchmarks
+      - name: Run fast unit/contract tests
+        env:
+          PYTHONPATH: src
+          GEOMETRY_ALLOW_REMOTE_INFERENCE: "0"
+        run: |
+          python -m unittest discover -s tests -p 'test_*.py' -v
+
+# This workflow is explicitly not evidence of G0's Blender render or G1's
+# real cloud-model E2E. The trusted Mac mini / private GCS lane is separate.
