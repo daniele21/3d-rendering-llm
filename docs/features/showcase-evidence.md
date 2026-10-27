@@ -34,7 +34,7 @@ showcase/
 
 ### Planned commands and ownership
 
-At G0 introduce native `geometry showcase --milestone G0 --output ci-artifacts/showcase/g0`, `geometry showcase validate PATH`, and a fixture-driven E2E test. Names are *intended interfaces*, not functioning commands today. Each later milestone adds its case to the same runner. `geometry showcase --milestone Gx --open` should build/open the static gallery and optionally open the native .blend in Blender; no web hosting required.
+At G0 use implemented `python3 -m geometry_harness showcase --milestone G0 --output ci-artifacts/showcase/g0`, `python3 -m geometry_harness showcase validate PATH`, and fixture-driven E2E tests. The commands exist on `feature/g0-blender-showcase` but need a successful Blender run on the target Mac mini to claim G0 DONE. Each later milestone adds its case to the same runner. `geometry showcase --milestone Gx --open` should build/open the static gallery and optionally open the native .blend in Blender; no web hosting required.
 
 Expected test hierarchy: `tests/unit/` for manifest/writer/hashes, `tests/integration/` for Blender and MCP contracts, and `tests/e2e/test_showcase_gX.py` for the real representative user path. Add a negative case per milestone (same test file or companion) proving a distinct failure signal.
 
@@ -61,8 +61,8 @@ All test paths below are **planned** and become real when that milestone is impl
 - **Cloud experiments (G1/G2/G5):** workflow_dispatch/manual or explicitly authorized cost-bounded CI with provider secrets gated and unavailable to untrusted change branches. Not part of every push; no passing claim from a mocked provider.
 - **Local AI (G6/G7):** dedicated appropriately provisioned self-hosted Mac with locally cached models. Record peak memory, inference duration and verified offline evidence; do not treat ordinary hosted CPU job as representative.
 - **UI (G8):** screenshots plus continuous critical-journey video where required by the inherited product UI contract; CI artifacts preserve it.
-- **Publish:** the central Actions workflow uploads `ci-artifacts/showcase/` via `actions/upload-artifact@v4` even on a failed test, when files exist, with seven-day retention. Follow central run link from source `local-ci/mac` status and download `geometry-showcase-<run-id>`. This is not a source-repository artifact; no Git binary render commits.
-- **Retention:** Git retains small task fixtures/schema/tests; local or CI artifact store retains immutable run bundles temporarily; optional promoted reference examples may be published as versioned release assets after validation and provenance review.
+- **Publish:** central `geometry-mac-mini.yml` uses keyless GitHub OIDC federation to upload `ci-artifacts/showcase/` into **private GCS**, under `gs://BUCKET/geometry-harness/g0/SOURCE_SHA/GITHUB_RUN_ID-attempt-N/`. It uploads diagnostics even if Blender fails, but only passes G0 if real Blender tests succeed and the required GCS object paths are confirmed. No `actions/upload-artifact` dependency or Git binary render commits. Configure via `local-runner-infra/docs/geometry-gcs-artifacts.md`.
+- **Retention:** Git retains only small fixtures/schema/tests; private GCS retains immutable run bundles and their hashes. No automatic deletion until the team decides development vs milestone retention; use bucket lifecycle policies afterward. Optional promoted reference examples may be separately published after provenance review.
 - **Review ritual:** open `index.html` or `contact-sheet.png`, inspect renders visually, read objective checks, open `scene.blend` when needed, and compare to prior milestone. Automated success alone never attests to artistic quality.
 
 ## Milestone promotion rule
