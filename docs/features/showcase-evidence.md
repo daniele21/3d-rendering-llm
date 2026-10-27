@@ -11,6 +11,19 @@ A passing unit test alone does not show the result of a 3D project. **Every mile
 
 Implement the minimal common evidence writer in G0, then **extend the same format** rather than inventing new report and storage conventions for later phases.
 
+## Revised sprint application (2026-10-27)
+
+The [active benchmark-driven plan](../workstreams/geometry-harness.md) reorders delivery, **not** evidence rigor:
+
+- G0/S0 still requires deterministic **real** Blender evidence and verified private GCS upload.
+- G1/S1 becomes the first **real AI + 3DCodeBench smoke task** showcase; seed a frozen baseline plus source/model/tool identities.
+- G5 benchmark tooling starts **in G1/S1** (6 smoke), expands in S2 (24 core) and releases (212 full) instead of waiting for G4. Every benchmark includes failures and cost/latency.
+- G2/S2–S4 adds actual orthographic + isometric views, objective geometry gates, blinded visual judge and bounded repair, each with negative-path evidence.
+- S3 planner and S5 generated-2D ablations are **separate A/B E2E acceptance slices** even though they are optional strategies, each producing native scene, image, manifest, paired report and failure path. No CADCraft dependency; 2D reference is measured against direct Blender.
+- Editing, local model and final Cycles retain G3–G8 real-E2E obligations; the gallery remains available from G0.
+
+**Detailed evaluation spec:** [benchmark-protocol.md](benchmark-protocol.md). Preserve the original G0–G8 test matrix below as per-capability mandatory gates; the sprint mapping dictates when they first become executable. Never use fake test PNGs, synthetic model calls or unscored/UNKNOWN outcomes as proof of a quality improvement.
+
 ## Required output of every milestone test
 
 For a successful real showcase test, write to an ignored, unique `runs/<run-id>/showcase/` folder:
