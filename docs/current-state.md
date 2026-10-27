@@ -15,9 +15,9 @@ G0 — Adopt the template as this project and deliver a deterministic Blender ta
 ## Repository blockers
 
 - Product app entrypoints and root README/AGENTS are specialized on feature/g0-blender-showcase; some legacy template distribution files remain for later cleanup.
-- The Mac mini CI source script has been added to the planning branch; the central runner allowlist and artifact publishing require reviewed deployment in `local-runner-infra`. No Mac job or Blender E2E has been verified yet.
+- Actual `local-mac-mini-3` ran the G0 workflow. Source checkout succeeded, but Blender was not detected, and the old GitHub artifact upload hit quota. The central workflow is being migrated to a private GCS bucket; cloud IAM/bucket provisioning and a successful real G0 E2E are still unverified.
 - Upstream integration and inference remain untested; they do not block deterministic G0.
 
 ## Next
 
-Run reviewed G0 SHA via the dedicated `geometry-mac-mini.yml`, after applying the `geometry-mac-mini` custom label to an actual `local-mac-mini-*` runner. Inspect `.blend` and PNG, resolve missing Blender/artifact quota/status-token blockers, then promote G1. A generic `central-ci.yml` run on `local-mac-1` does not satisfy the Mac mini requirement. Do not mark any milestone DONE based only on this plan.
+Provision the private GCS bucket/WIF and repo variables via `local-runner-infra/scripts/bootstrap_geometry_gcs.sh` with the selected GCP project; install Blender or set `BLENDER_BIN` on `local-mac-mini-3`; request reviewed G0 SHA on `geometry-mac-mini.yml`, inspect `.blend`/PNG and GCS inventory. Existing shared labels are enough to queue (wrong-Mac attempts fail in the runner-name guard); no custom label is required. Do not mark DONE until tests and private GCS upload are proven.
