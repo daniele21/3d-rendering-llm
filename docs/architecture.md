@@ -2,6 +2,20 @@
 
 Status: **target design, not as-built** (2026-10-26). Implement only the smallest subset consumed by the current vertical milestone. Product intent lives in product.md; milestone execution and dependencies live in workstreams/geometry-harness.md.
 
+## Benchmark-driven design addendum (2026-10-27)
+
+Blender remains the primary native modeling/render engine. Do **not** introduce CADCraft or a 2D-first processing requirement in the production path. Scientific evidence motivates optional reference-based ablations, not a predetermined winner.
+
+Start with the simplest code-first baseline, publish a real Blender showcase each sprint, and measure performance through the [frozen benchmark protocol](features/benchmark-protocol.md). Strategy experiments are isolated adapters behind flags:
+- `direct`: prompt -> Blender Python.
+- `structured-plan`: prompt -> typed parts/dimensions/relations -> Blender Python (not a universal geometry IR).
+- `2d-generated-reference`: prompt -> concept image or orthographic/layout 2D -> Blender Python; cost and ambiguity accounted for.
+- `repair`: objective geometry checks -> multiview renders -> optional independent visual judge -> bounded retries, preserving checkpoints.
+
+Scoring is **not** a source of generator ground truth: benchmark factories/meshes and secret expected results must be inaccessible to the generation process. Artifacts and scorer are isolated, suite/task identity pinned. Each candidate must create a native reopenable Blender scene; an attractive PNG alone does not count.
+
+Plan/experiments may develop in parallel with providers and harness, but integrate after a stable TaskSpec/EvaluationRecord/RunManifest interface and real per-sprint E2E. See [workstream dependency DAG](workstreams/geometry-harness.md).
+
 ## Components and data path
 
 Prompt/spec -> ProviderAdapter (cloud agent/LLM or local open-weight LLM)
