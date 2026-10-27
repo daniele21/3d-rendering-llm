@@ -11,3 +11,7 @@ This project uses repository-scoped runners belonging to `daniele21/local-runner
 - Keep existing hosted template validation until the app is specialized and parity is demonstrated; do not edit central Terraform-managed workflows from this source repo.
 - Paid LLM API experiments and heavyweight open-weight tests require separate explicit invocation and bounded resources; never trigger them on every source commit.
 - Gitignored large render/model artifacts and bounded retention are mandatory. The source script must not alter sibling projects or runner installation state.
+
+## Durable visual artifacts
+
+The dedicated central Mac mini job stores real Blender `.blend`/PNG/manifest outputs in **private Google Cloud Storage**, not GitHub Actions artifact storage. GCS IAM is configured outside this source repo with the central `scripts/bootstrap_geometry_gcs.sh` and short-lived GitHub Workload Identity Federation. Never store JSON service-account keys in this repo. The G0 completion gate requires successful Blender E2E and confirmed GCS upload inventory. See `local-runner-infra/docs/geometry-gcs-artifacts.md`.
