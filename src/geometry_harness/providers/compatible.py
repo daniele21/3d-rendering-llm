@@ -90,7 +90,8 @@ class OpenAICompatibleCodeProvider:
             raise ProviderError("Prompt must be nonempty and within 12,000 characters")
         body = {
             "model": self.model,
-            "max_tokens": self.max_output_tokens,
+            "max_completion_tokens": self.max_output_tokens,
+            "reasoning_effort": "low",
             "messages": [
                 {"role": "system", "content": (
                     "Write ONLY executable Blender Python 5.0 source code for the user request. "
@@ -116,7 +117,10 @@ class OpenAICompatibleCodeProvider:
             raise ProviderError("Provider response exceeds size limit")
         try:
             payload = json.loads(raw)
-            message = payload["choices"][0]["message"]["content"]
+            choice = payload["choices"][0]
+            if choice.get("finish_reason") != "stop":
+                raise ProviderError("Model generation incomplete or refused")
+            message = choice["message"]["content"]
             usage = payload.get("usage") or {}
             if not isinstance(usage, dict):
                 usage = {}
