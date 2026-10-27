@@ -23,7 +23,7 @@ The output folder must not already contain files (runs are immutable). Generated
 
 ## Mac mini CI
 
-Shared macOS runners belong to `daniele21/local-runner-infra`; **G0 must be assigned to a Mac mini**, not generic `local-mac-1`. The dedicated central `geometry-mac-mini.yml` requires the verified `geometry-mac-mini` label plus `macOS,ARM64,local-shared`, and validates the `local-mac-mini-*` runner name. The reviewed operator runs `bash scripts/request_geometry_ci.sh <trusted-SHA>` in the central repo once that label exists. The job publishes `ci-artifacts/showcase/` when GitHub artifact quota permits. Hosted template-health CI remains separate. Source status reporting requires `CENTRAL_SOURCE_TOKEN` permission for this repo.
+Shared macOS runners belong to `daniele21/local-runner-infra`; **G0 must be assigned to a Mac mini**, not generic `local-mac-1`. The dedicated central `geometry-mac-mini.yml` requires the verified `geometry-mac-mini` label plus `macOS,ARM64,local-shared`, and validates the `local-mac-mini-*` runner name. The reviewed operator runs `bash scripts/request_geometry_ci.sh <trusted-SHA>` in the central repo once that label exists. The job publishes `ci-artifacts/showcase/` to a **private Google Cloud Storage bucket** through short-lived GitHub OIDC credentials; GitHub Actions artifact quota is not used. The central GCS setup/permissions runbook is in `local-runner-infra/docs/geometry-gcs-artifacts.md`. Hosted template-health CI remains separate. Source status reporting requires `CENTRAL_SOURCE_TOKEN` permission for this repo.
 
 ## Planned next steps
 
