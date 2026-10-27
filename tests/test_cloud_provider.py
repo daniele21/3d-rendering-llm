@@ -40,7 +40,7 @@ class ProviderTests(unittest.TestCase):
                 OpenAICompatibleCodeProvider.from_env()
 
     def test_generated_code_and_unknown_cost(self):
-        payload = {"choices": [{"message": {"content": "```python\nimport bpy\nbpy.ops.mesh.primitive_cube_add()\n```"}}],
+        payload = {"choices": [{"finish_reason": "stop", "message": {"content": "```python\nimport bpy\nbpy.ops.mesh.primitive_cube_add()\n```"}}],
                    "usage": {"prompt_tokens": 50, "completion_tokens": 12}}
         with patch.dict(os.environ, {"GEOMETRY_ALLOW_REMOTE_INFERENCE": "1"}), patch(
             "geometry_harness.providers.compatible.urlopen", return_value=MockResponse(payload)
@@ -52,11 +52,25 @@ class ProviderTests(unittest.TestCase):
         self.assertIsNone(result.cost_usd)
         self.assertEqual(send.call_count, 1)
         self.assertEqual(send.call_args.kwargs["timeout"], 5)
+        wire = json.loads(send.call_args.args[0].data)
+        self.assertEqual(wire["max_completion_tokens"], 4096)
+        self.assertEqual(wire["reasoning_effort"], "low")
+        self.assertNotIn("max_tokens", wire)
+
+    def test_truncated_output_is_not_accepted(self):
+        payload = {"choices": [{"finish_reason": "length",
+                    "message": {"content": "import bpy"}}]}
+        with patch.dict(os.environ, {"GEOMETRY_ALLOW_REMOTE_INFERENCE": "1"}), patch(
+            "geometry_harness.providers.compatible.urlopen",
+            return_value=MockResponse(payload),
+        ):
+            with self.assertRaisesRegex(ProviderError, "incomplete"):
+                provider().generate("cube")
 
     def test_syntax_error_is_bounded_failure(self):
         with patch.dict(os.environ, {"GEOMETRY_ALLOW_REMOTE_INFERENCE": "1"}), patch(
             "geometry_harness.providers.compatible.urlopen",
-            return_value=MockResponse({"choices": [{"message": {"content": "def bad(:\n pass"}}]}),
+            return_value=MockResponse({"choices": [{"finish_reason": "stop", "message": {"content": "def bad(:\n pass"}}]}),
         ):
             with self.assertRaisesRegex(ProviderError, "syntax error"):
                 provider().generate("create a cube")
