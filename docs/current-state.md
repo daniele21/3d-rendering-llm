@@ -20,4 +20,4 @@ G0 — Adopt the template as this project and deliver a deterministic Blender ta
 
 ## Next
 
-Run reviewed feature/g0-blender-showcase SHA through central Mac mini CI; inspect full showcase, resolve genuine runtime failures, then promote G1. The status token currently lacks source write permission (HTTP 403). Do not mark any milestone DONE based only on this plan.
+Run reviewed G0 SHA via the dedicated `geometry-mac-mini.yml`, after applying the `geometry-mac-mini` custom label to an actual `local-mac-mini-*` runner. Inspect `.blend` and PNG, resolve missing Blender/artifact quota/status-token blockers, then promote G1. A generic `central-ci.yml` run on `local-mac-1` does not satisfy the Mac mini requirement. Do not mark any milestone DONE based only on this plan.
