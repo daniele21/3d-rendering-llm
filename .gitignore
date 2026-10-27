@@ -14,3 +14,6 @@ ci-artifacts/
 .env
 .env.*
 !.env.example
+
+# Transient Workload Identity Federation credentials from GitHub Actions
+gha-creds-*.json
