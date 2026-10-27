@@ -50,7 +50,12 @@ def build(folder):
     scene.render.image_settings.file_format = "PNG"
     # Portable Blender-relative path: preview stays beside scene.blend after export.
     scene.render.filepath = "//preview.png"
-    # Keep the native file uncompressed: validate() checks the raw BLENDER header.\n    # Blender otherwise may save zstd-compressed .blend files (different magic).\n    bpy.ops.wm.save_as_mainfile(filepath=str(folder / "scene.blend"), compress=False)
+    # Pin an uncompressed native .blend: validate checks the BLENDER magic.
+    # Blender's compressed zstd files have a different file header.
+    bpy.ops.wm.save_as_mainfile(
+        filepath=str(folder / "scene.blend"),
+        compress=False,
+    )
     bpy.ops.render.render(write_still=True)
 
 if __name__ == "__main__":

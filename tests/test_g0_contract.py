@@ -41,12 +41,28 @@ class ContractTests(unittest.TestCase):
                 )
 
     def test_builder_pins_uncompressed_native_blend_format(self):
-        # The validator checks BLENDER magic in a non-compressed native scene.
-        # A Blender preference or version default must not silently change it.
+        # Search executable AST calls, not textual matches hidden inside comments.
+        import ast
         from geometry_harness.cli import BUILD
-        source = BUILD.read_text(encoding="utf-8")
-        self.assertIn("save_as_mainfile(", source)
-        self.assertIn("compress=False", source)
+        tree = ast.parse(BUILD.read_text(encoding="utf-8"))
+        calls = [
+            node for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and ast.unparse(node.func) == "bpy.ops.wm.save_as_mainfile"
+        ]
+        self.assertEqual(len(calls), 1, "Expected exactly one executable save call")
+        compression = [
+            item.value for item in calls[0].keywords if item.arg == "compress"
+        ]
+        self.assertEqual(len(compression), 1)
+        self.assertIsInstance(compression[0], ast.Constant)
+        self.assertIs(compression[0].value, False)
+
+    def test_blender_script_errors_have_nonzero_exit_policy(self):
+        import inspect
+        from geometry_harness.cli import create_g0
+        source = inspect.getsource(create_g0)
+        self.assertEqual(source.count('"--python-exit-code", "14"'), 2)
 
     def test_png_dimensions(self):
         with tempfile.TemporaryDirectory() as temp:

@@ -99,15 +99,16 @@ def create_g0(output):
     shutil.copy2(BUILD, artifacts / "generate.py")
     started = time.monotonic()
     build_duration = run_blender(
-        [binary, "-b", "--factory-startup", "--python", str(BUILD),
+        [binary, "-b", "--factory-startup", "--python-exit-code", "14",
+         "--python", str(BUILD),
          "--", "--outdir", str(artifacts.resolve())],
         logs / "build.txt",
     )
     if not (artifacts / "scene.blend").is_file():
-        raise ShowcaseError("Blender did not save scene.blend")
+        raise ShowcaseError("Blender did not save scene.blend; inspect logs/build.txt")
     inspect_duration = run_blender(
         [binary, "-b", str((artifacts / "scene.blend").resolve()),
-         "--python", str(INSPECT),
+         "--python-exit-code", "14", "--python", str(INSPECT),
          "--", "--output", str((artifacts / "geometry.json").resolve())],
         logs / "inspect.txt",
     )
