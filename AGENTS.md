@@ -7,6 +7,7 @@ This is the **3d-rendering-llm application**, not the generic `repo-template-sw`
 - Root README: user commands. `docs/product.md`: durable product direction.
 - `docs/workstreams/geometry-harness.md`: active G0–G8 dependency DAG and task state (not implementation evidence).
 - `docs/features/showcase-evidence.md`: mandatory real end-to-end (E2E) visual artifact contract for each slice.
+- `docs/features/benchmark-protocol.md`: immutable external benchmark cohorts, source/provenance isolation, paired A/B, FAIL/UNKNOWN and cost accounting. Benchmark reference factories must never leak into generator context.
 - `docs/architecture.md`: proposed code-first / typed MCP / hybrid boundaries.
 - `src/geometry_harness/`: CLI and stdlib orchestration; `src/geometry_harness/blender/`: code executed in Blender embedded Python.
 - `tests/test_g0_contract.py`: fast contract tests; `tests/e2e/test_showcase_g0.py`: real Blender showcase + tamper-failure test.
