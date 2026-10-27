@@ -40,6 +40,14 @@ class ContractTests(unittest.TestCase):
                     seconds=0.05,
                 )
 
+    def test_builder_pins_uncompressed_native_blend_format(self):
+        # The validator checks BLENDER magic in a non-compressed native scene.
+        # A Blender preference or version default must not silently change it.
+        from geometry_harness.cli import BUILD
+        source = BUILD.read_text(encoding="utf-8")
+        self.assertIn("save_as_mainfile(", source)
+        self.assertIn("compress=False", source)
+
     def test_png_dimensions(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "img.png"
