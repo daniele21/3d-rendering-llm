@@ -1,6 +1,7 @@
 """Versioned token pricing; costs are usage-derived estimates, not invoices.
 
-Official OpenAI model pricing: https://developers.openai.com/api/docs/models/gpt-6.1-sol
+Official OpenAI model pricing: https://developers.openai.com/api/docs/pricing
+Model Luna: https://developers.openai.com/api/docs/models/gpt-6-luna
 Prompt caching: https://developers.openai.com/api/docs/guides/prompt-caching
 Rates USD per 1M tokens; standard global API, no fast/region surcharge.
 Do not silently apply unknown model, service tier or incomplete usage.
@@ -9,12 +10,19 @@ from __future__ import annotations
 
 from decimal import Decimal, ROUND_HALF_UP
 
-PRICE_SNAPSHOT = "openai-2026-10-28-standard-global-v1"
+PRICE_SNAPSHOT = "openai-2026-10-28-standard-global-v2-sol-legacy-luna"
+# Preserve Sol history and version the price snapshot for all new Luna runs.
 LONG_CONTEXT_AT = 272000  # input > 272k billed at long context rates, for entire request
 RATE_CARD = {
     "gpt-6.1-sol": {
         "short": ("2", "0.10", "2.50", "5", "10"),
         "long": ("4", "0.20", "5", "10", "15"),
+    },
+    "gpt-6-luna": {
+        # Official published API identifier (NOT gpt-6.1-luna).
+        # USD/1M: uncached input, cache read, 30m write, 12h write, output.
+        "short": ("0.10", "0.01", "0.125", "0.25", "0.50"),
+        "long": ("0.20", "0.02", "0.25", "0.50", "0.75"),
     },
 }
 MILLION = Decimal(1_000_000)
