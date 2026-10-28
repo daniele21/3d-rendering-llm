@@ -24,7 +24,7 @@ It contains original AI Python source (NOT executed), accepted safe-literal geom
 
 - The default cloud adapter has a **manual explicit** `GEOMETRY_ALLOW_REMOTE_INFERENCE=1`, requires project API secret, uses `gpt-6.1-sol` for the initial internal smoke, and never makes paid calls from ordinary source PR or G0.
 - G0 and the G1 fixture use real Blender 5.2.3 on macOS ARM64.
-- Model-authored Python is currently *never* handed to a Blender subprocess. We parse a **strict, literal, five-cube-capable Blender bpy subset** using Python AST (no exec/eval), reject imports/functions/loops/network/file ops, convert it to validated data, then execute our own audited Blender builder and an independent inspector in a new Blender process.
+- Model-authored Python is currently *never* handed to a Blender subprocess. We parse a **strict, bounded Blender bpy subset supporting cubes, cylinders and UV spheres** using Python AST (no exec/eval), reject imports/functions/loops/network/file ops, convert it to validated data, then execute our own audited Blender builder and an independent inspector in a new Blender process.
 - This means **G1 currently supports only a narrow set of literal cube-based shapes**, not arbitrary procedural Blender generation. Native editability is preserved in the produced scene. Future quality comparisons must state this restriction.
 - Full upstream 3DCodeBench nominal environment targets Blender 5.0; the Mac fixture used Blender 5.2.3. Do **not** publish official comparable benchmark results before pinning/verifying the scorer and licence environment.
 
