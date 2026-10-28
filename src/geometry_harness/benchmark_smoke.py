@@ -27,6 +27,7 @@ from geometry_harness.costs.pricing import RATE_CARD
 from geometry_harness.g1 import BUILDER, INSPECT, _safe_run
 from geometry_harness.providers.compatible import OpenAICompatibleCodeProvider, ProviderError
 from geometry_harness.strategies.bpy_subset import compile_bpy_subset, UnsafeGeneratedCode
+from geometry_harness.telemetry.spans import TraceRecorder, write_summary
 
 MODEL = "gpt-6-luna"  # Published API identifier; 6.1-luna is not documented.
 EXPECTED_REV = "b70b4ee54b93fab76596da5809f3e71c617fa5c2"
@@ -110,6 +111,7 @@ def run(output: Path, public_root: Path, suite: Path) -> dict:
     records = []
     aborted_reason = None
     started = time.monotonic()
+    trace = TraceRecorder(output, source_sha=source_sha())
     for task_id in ids:
         folder = public_root / task_id
         task_out = outdir / task_id
@@ -140,7 +142,9 @@ def run(output: Path, public_root: Path, suite: Path) -> dict:
             os.environ["GEOMETRY_BENCHMARK_TASK_ID"] = task_id
             # Exactly one request per task. Never retry failed, refused or unpriced calls.
             try:
-                output_code = provider.generate(prompt)
+                with trace.span("llm.generate") as span:
+                    output_code = provider.generate(prompt)
+                    span.cost_call_id = output_code.call_id
             finally:
                 os.environ.pop("GEOMETRY_BENCHMARK_TASK_ID", None)
             record["call_id"] = output_code.call_id
@@ -154,16 +158,19 @@ def run(output: Path, public_root: Path, suite: Path) -> dict:
             total_model_usd += Decimal(output_code.cost_usd)
             code_path = task_out / "model-generated.py"
             code_path.write_text(output_code.code, encoding="utf-8")
-            plan = compile_bpy_subset(output_code.code)
+            with trace.span("code.compile"):
+                plan = compile_bpy_subset(output_code.code)
             record["safe_source"] = "PASS"
             _write(task_out / "scene-spec.json", plan)
-            _safe_run([binary, "-b", "--factory-startup", "--python-exit-code", "14",
-                       "--python", str(BUILDER), "--", "--spec", str(task_out/"scene-spec.json"),
-                       "--out", str(task_out)], task_out / "build.txt", limit=70)
-            _safe_run([binary, "-b", str(task_out/"scene.blend"), "--python-exit-code", "14",
-                       "--python", str(INSPECT), "--", "--spec", str(task_out/"scene-spec.json"),
-                       "--output", str(task_out/"geometry.json")],
-                      task_out / "inspect.txt", limit=70)
+            with trace.span("blender.build"):
+                _safe_run([binary, "-b", "--factory-startup", "--python-exit-code", "14",
+                           "--python", str(BUILDER), "--", "--spec", str(task_out/"scene-spec.json"),
+                           "--out", str(task_out)], task_out / "build.txt", limit=70)
+            with trace.span("scene.reopen"):
+                _safe_run([binary, "-b", str(task_out/"scene.blend"), "--python-exit-code", "14",
+                           "--python", str(INSPECT), "--", "--spec", str(task_out/"scene-spec.json"),
+                           "--output", str(task_out/"geometry.json")],
+                          task_out / "inspect.txt", limit=70)
             geometry = json.loads((task_out/"geometry.json").read_text())
             if not geometry.get("passed"):
                 raise ShowcaseError("Independent Blender geometry check rejected scene")
@@ -193,6 +200,7 @@ def run(output: Path, public_root: Path, suite: Path) -> dict:
         if aborted_reason:
             break
     cost = _cost(output)
+    performance = write_summary(output) if trace.path.is_file() else None
     if cost is None or cost.get("grand_total_status") != "COMPLETE":
         aborted_reason = aborted_reason or "UnknownBilling"
     if cost and Decimal(cost["priced_subtotal_usd"]) > MAX_MODEL_USD:
@@ -213,6 +221,8 @@ def run(output: Path, public_root: Path, suite: Path) -> dict:
         "model_usd_upper_budget": str(MAX_MODEL_USD),
         "model_estimated_usd": cost["priced_subtotal_usd"] if cost else None,
         "cost_reconciliation": cost["grand_total_status"] if cost else "UNKNOWN",
+        "trace_status": performance["status"] if performance else "INCOMPLETE_UNKNOWN",
+        "observed_span_wall_ms": performance["observed_wall_ms"] if performance else None,
         # A failed/refused/generated-invalid last task is a benchmark FAIL,
         # not a missing test, PROVIDED all six calls are accounted and priced.
         # Still reject unknown billing, model mismatch and overspend.
