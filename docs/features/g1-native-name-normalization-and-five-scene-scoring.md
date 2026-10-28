@@ -47,8 +47,8 @@ dependencies (numpy, scipy and trimesh).
       --upstream "$HOME/geometry-evidence/scorer/3dcodebench" \
       --refs "$HOME/geometry-evidence/luna-six-reference-glbs"
 
-Use a new --out on every attempt; never point it at the original bundle or the
-original scorer stage. Before running Blender, the CLI independently validates
+Use a new --out on every **new export** attempt; never point it at the
+original bundle or the original scorer stage. Before running Blender, the CLI independently validates
 original audit/cost, original pinned scorer provenance, hashes of both existing
 generated GLBs, hashes of every derived native artifact, deterministic name-only
 source transform, original SHA and reopened geometry/mesh names.
@@ -76,3 +76,46 @@ not confer an official 3DCodeBench leaderboard result.
 The remaining gates are real Mac native E2E of stable IDs and a human-reviewed
 reference/render comparison. BrainCoral none-vs-low remains a separately
 authorized paid experiment.
+
+
+## Recover from missing pinned scorer after exports were staged
+
+If the first attempt printed "Scorer staging and pinned upstream script required",
+the five GLBs are likely already exported. **Do not delete that output**. The
+initial version performed the path check *after* creating output, which made a
+simple rerun fail with "output already exists". This version checks the scorer
+and reference paths **before** exporting and adds a guarded --resume option.
+
+Locate the actual checkout on the same Mac (the original 2/6 score used it):
+
+    find "$HOME/geometry-evidence" "$HOME/Projects" \
+      -type f -name shape_chamfer.py -print 2>/dev/null
+
+The correct --upstream value is the directory *above* metrics/, with a real
+metrics/shape_chamfer.py script, at git commit
+42c7780ed3fcbd466f17f058f62e7996233777f7. Check with
+`git -C "/path/to/checkout" rev-parse HEAD`. Do **not** supply a different
+version or bypass the commit/hash gate.
+
+After pulling the new feature branch, re-use the existing export stage without
+running Blender again:
+
+    cd ~/Projects/3d-rendering-llm
+    git pull --ff-only
+    export PYTHONPATH=src
+    python3 -m geometry_harness.evaluation.counterfactual_shape \
+      --resume \
+      --original "$HOME/geometry-evidence/luna-six-original/historical-evidence" \
+      --baseline-stage "$HOME/geometry-evidence/luna-six-shape-stage" \
+      --derived "$HOME/geometry-evidence/luna-six-native-name-ablation-01" \
+      --out "$HOME/geometry-evidence/luna-six-five-scene-shape-01" \
+      --upstream "/ACTUAL/PINNED/3dcodebench/ROOT" \
+      --refs "$HOME/geometry-evidence/luna-six-reference-glbs"
+
+Resume re-audits the private original/native source provenance, six staged
+task rows and hashes of all five generated GLBs, checks the two originals are
+byte-identical to the frozen baseline, verifies each derived expected-ID export
+and refuses any prior scorer output. It does **not** overwrite GLBs, re-export
+or regenerate scenes; it scores only the existing verified stage. Resume itself
+never calls Luna. It refuses a partial/tampered stage; in that case preserve
+the failed output as evidence and use a **new** --out after fixing preflight.
