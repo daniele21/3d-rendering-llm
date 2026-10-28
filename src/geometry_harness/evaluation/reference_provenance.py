@@ -80,16 +80,16 @@ def _archive_member_info(member: tarfile.TarInfo) -> tuple[str, str] | None:
     parts = PurePosixPath(member.name).parts
     if ".." in parts or member.name.startswith("/"):
         raise ReferenceGateError("Unsafe archive member path")
-    # The archive can have one top-level directory wrapper; only a
-    # suffix data/<task>/... is recognized. No arbitrary content extracted.
+    # Public release: data/<task>/glb/<task>.glb plus flat prompt and
+    # factory files in data/<task>/. Optional top-level archive wrapper.
+    if (len(parts) >= 4 and parts[-4] == "data" and parts[-2] == "glb"
+        and parts[-3] in EXPECTED_IDS and parts[-1] == parts[-3] + ".glb"):
+        return parts[-3], parts[-1]
     if len(parts) < 3 or parts[-3] != "data":
         return None
     task, suffix = parts[-2:]
-    if task not in EXPECTED_IDS:
-        return None
-    if suffix == f"{task}.glb":
-        return task, suffix
-    if suffix in (f"{task}.py", "prompt_description.txt", "prompt_instruction.txt"):
+    if task in EXPECTED_IDS and suffix in (
+        f"{task}.py", "prompt_description.txt", "prompt_instruction.txt"):
         return task, suffix
     return None
 
