@@ -20,10 +20,16 @@ two-scene cohort because the upstream scorer advances a shared RNG across
 scenes. Semantic fidelity remains unknown.
 
 Draft PR #66 contains the optional safe name normalizer, read-only evidence
-inspection and a new per-task RNG-isolated shape protocol. Its private
-operator-run gate is pending. Next gates are visual/semantic inspection of
-recovered shapes, diagnosis of Balloon's high CD, and separately authorized
-reasoning-budget evaluation for BrainCoral. See
+inspection and a new per-task RNG-isolated shape protocol. **Private operator
+per-task gate PASSED** (2 baseline / 5 candidate, original 2 common tasks
+exactly reproducible). Same-seed per-task CD: AquariumTank 0.0492351973,
+ArmChair 0.0361636561, Bottle 0.0126790194, CoffeeTable 0.0444880948,
+Balloon 0.6346081023; BrainCoral absent. Candidate conditional mean
+0.15543481398467845. This is not an official scorer result nor a comparable
+model-quality improvement versus 2/6 with different successful subsets.
+Next gates are real Mac E2E of safe name/geometry-ID normalization,
+visual/semantic inspection of recovered shapes, diagnosis of Balloon's high
+CD, and separately authorized reasoning-budget evaluation for BrainCoral. See
 [observations and runbook](../features/g1-native-name-normalization-and-five-scene-scoring.md).
 
 ## North star, motivation, and scope
