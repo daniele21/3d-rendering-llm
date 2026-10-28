@@ -261,12 +261,8 @@ class CounterfactualScoringTests(unittest.TestCase):
             with patch("geometry_harness.evaluation.counterfactual_shape._preflight",
                        return_value=(original,provenance,baseline,{},{})), patch(
                        "geometry_harness.evaluation.counterfactual_shape._validate_resumable_stage") as stage, patch(
-                       "geometry_harness.evaluation.counterfactual_shape.subprocess.run",
-                       side_effect=fake_git, create=True) as git:
-                # subprocess is imported in the function; patch the module it resolves.
-                from unittest.mock import patch as p
-                with p("subprocess.run", side_effect=fake_git):
-                    diagnostic = diagnose_existing(root, root, root, out, upstream, refs)
+                       "subprocess.run", side_effect=fake_git):
+                diagnostic = diagnose_existing(root, root, root, out, upstream, refs)
             self.assertEqual(diagnostic["shape_status"],"DESCRIPTIVE_5_SCENES_NOT_PAIRED")
             self.assertEqual(diagnostic["n_scored"],5)
             self.assertTrue(diagnostic["frozen_references_match"])
