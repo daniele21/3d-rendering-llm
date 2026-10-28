@@ -94,6 +94,10 @@ conditional successful-scenes mean and a failure-penalized six-task mean
 are computed by the upstream script, but cannot be assumed equivalent to
 the original Blender 5.0 free-Python leaderboard.
 
+## Operator execution result — 2026-10-28
+
+The operator completed the pinned reference download (1.95GB), verified 6/6 prompt and factory script identities and all reference GLBs, then executed the pinned upstream shape scorer on the historical two generated Luna GLBs. The recorded metrics: `n_instances=6`, `n_scored=2`, `cd.conditional_mean=0.33838396924096587`, `cd.penalized_mean=0.7474027587207573`, `model_calls=0`; profile `NONCOMPARABLE_5_2_BLENDER_AND_RESTRICTED_AST`. For per-task scores and yaw-min, inspect the original `shape_chamfer.json`. Do **not** compare its run-relative penalized mean across different task sets/acceptance policies. [Recorded evidence](luna-first-shape-chamfer-results.md).
+
 ## Non-negotiable limits
 
 - No additional Luna/API calls; the only possible new costs are public data
