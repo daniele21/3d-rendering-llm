@@ -232,9 +232,12 @@ def main(argv=None) -> int:
         archive = a.archive
         if a.download_archive:
             from huggingface_hub import hf_hub_download
+            # hf_hub_download may return a symlink into its content-addressed
+            # cache. Resolve ONLY in this authenticated pinned-download path;
+            # caller-supplied --archive symlinks still fail closed.
             archive = Path(hf_hub_download(
                 repo_id=ARCHIVE_REPO, repo_type="dataset",
-                revision=ARCHIVE_SHA, filename=ARCHIVE_FILENAME))
+                revision=ARCHIVE_SHA, filename=ARCHIVE_FILENAME)).resolve()
         result = verify_archive(archive, source, a.out,
                                 remote_archive_verified=a.download_archive,
                                 pinned_source_verified=a.source_root is None)
