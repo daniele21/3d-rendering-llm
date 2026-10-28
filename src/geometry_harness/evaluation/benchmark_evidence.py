@@ -65,6 +65,10 @@ def audit(root: Path) -> dict:
     seen = set()
     for item in files:
         rel = item.get("path")
+        if isinstance(rel, str) and rel.endswith(".py") and not rel.endswith("/model-generated.py"):
+            raise EvidenceError("Reference or unrelated Python code forbidden in generator evidence")
+        if isinstance(rel, str) and (rel.startswith("reference/") or "/reference/" in rel):
+            raise EvidenceError("Scorer-only reference material leaked into generator bundle")
         if rel in seen:
             raise EvidenceError("Duplicate artifact inventory path")
         seen.add(rel)
