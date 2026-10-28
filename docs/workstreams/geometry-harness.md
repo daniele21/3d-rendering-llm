@@ -54,6 +54,12 @@ Milestones are **acceptance gates**, not a prohibition on parallel isolated impl
 
 **Execution order for value:** baseline + tracing → cheap validator → typed revision/scoped repair → adaptive repair/meta-tools if measured → local vs cloud and structured-CAD vertical → partner integration after discovery. A local provider probe and synthetic DXF fixture may begin in parallel, but no claims of comparative improvement until the appropriate baseline exists.
 
+### Zero-call native-name recovery ablation — operator verified 2026-10-28
+
+A private, deterministic **name-only** AST ablation was run on the three original Luna scripts rejected by the production object-name policy. All three passed the unchanged compiler, trusted native Blender build and fresh-process reopen: `AquariumTank_seed0` (22 meshes), `ArmChair_seed0` (15), `Bottle_seed0` (16). **Counterfactual executability 5/6** compared with **immutable historical 2/6** (+50 percentage points), with **zero new model calls**. This is *not* a production pipeline result or proof of correct appearance/shape. `BrainCoral_seed0` still has missing generated code because the 2048-token reasoning/output cap was exhausted. Derived `quality_status=UNKNOWN_NOT_SHAPE_SCORED`. Source hashes, scene evidence, native validation and reports remain private to the authorized operator Mac.
+
+**Decision:** prioritize a safe, collision-checked, stable-ID name normalizer and a separate upstream Chamfer run for **all five** native GLBs with pinned references; leave the original two-scene Chamfer report immutable. The upstream scorer's run-relative missing-GLB penalty must not be used as a fixed absolute comparison across the two cohorts. Record full paired quality/cost/latency before promoting automatic normalization into G1. No automatic new paid Luna inference is approved by this experiment.
+
 ### BH-02 operator-measured 3D shape baseline (2026-10-28)
 
 The six frozen Luna tasks have **now been scored with the pinned upstream shape Chamfer script** on the operator's isolated Mac using authenticated, provenance-matched public reference GLBs. Confirmed scorer status `UPSTREAM_SHAPE_CHAMFER_EXECUTED`: two accepted generated meshes (`CoffeeTable_seed0`, `Balloon_seed0`) of six attempts; four have no generated GLB. Normalized squared symmetric Chamfer **conditional 0.33838396924096587** over the two scored; **penalized 0.7474027587207573** over all six. No new model calls or token cost; historical source CI remains `INCOMPLETE` and token spend remains USD $0.004875300 for those six original requests.
