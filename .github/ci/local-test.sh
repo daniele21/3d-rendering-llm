@@ -43,6 +43,10 @@ if [[ -f pyproject.toml ]]; then
   GEOMETRY_SHOWCASE_DIR="$PWD/ci-artifacts/showcase/g0" \
     python3 -m unittest discover -s tests/e2e -p 'test_showcase_g0.py' -v
   python3 -m geometry_harness showcase validate ci-artifacts/showcase/g0
+  # This is a REAL Blender test of a trusted static source fixture, NOT a model run.
+  GEOMETRY_G1_FIXTURE_DIR="$PWD/ci-artifacts/showcase/g1-fixture" \
+    python3 -m unittest discover -s tests/e2e -p 'test_showcase_g1_fixture.py' -v
+  echo "G1 safe AST->Blender fixture verified with zero model calls."
   echo "G0 verified on real Blender; outputs in ci-artifacts/showcase/g0."
   exit 0
 fi
