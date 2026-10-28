@@ -24,6 +24,26 @@ Next steps: pin official scorer SHA, dependencies and licence terms; keep hidden
 
 **This PR does not claim official 3DCodeBench quality.**
 
+## Operator-run native GLB staging — verified 2026-10-28
+
+The operator executed the existing trusted exporter against the **previously audited** six-task Luna source bundle. The result is a locally generated `scorer-staging.json` with `model_calls=0`, `new_api_cost_estimate_usd="0"`, `original_run_status="INCOMPLETE"`, and `scoring_status="NOT_RUN_NO_REFERENCE_GLBS"`.
+
+| Task ID | Native scene | Exported GLB | SHA256 |
+| --- | --- | ---: | --- |
+| `CoffeeTable_seed0` | PASS | 60,724 bytes | `9172fd95b587f52374233d6d9788106a418f400074a8ffcc144402be7a0d1345` |
+| `Balloon_seed0` | PASS | 746,316 bytes | `10224636e4c2de720d1a664dd54efe656fddcc340c52bf01d4ad3f33eddd6bb3` |
+| `ArmChair_seed0`, `Bottle_seed0`, `AquariumTank_seed0`, `BrainCoral_seed0` | UNKNOWN | Not generated | No fabricated GLB/quality metric |
+
+The six-task denominator and model token estimate USD $0.004875300 are unchanged. This export demonstrates that the **two previously accepted** native scenes can be handed to a separate reference scorer. It does NOT establish prompt fidelity, mesh similarity, reference equivalence or an official 3DCodeBench score.
+
+### Next scoring gate: provenance-matched reference GLBs
+
+The pinned upstream [Chamfer scorer](https://github.com/gaoypeng/3dcodebench/blob/42c7780ed3fcbd466f17f058f62e7996233777f7/metrics/shape_chamfer.py) expects `--results-root` and `--data-root`, 8192 sampled surface points by default, independently unit-sphere-normalized point clouds and four yaw orientations. It writes a six-task report with `n_ok`, per-task status, conditional and penalized mean. **The penalized mean is run-relative**, so it must not be compared across unrelated cohorts or protocol versions.
+
+Potential reference sources: the 3DCodeBench benchmark's own `YipengGao/3DCode` reference factories (not to be executed in the shared generator environment) and the separately published [3dcodebench/3dcodebench](https://huggingface.co/datasets/3dcodebench/3dcodebench) release containing GLBs and prompts in a compressed archive (about 1.95 GB). Before scoring, compare the **exact public prompt bytes** of all six entries against our pinned `YipengGao/3DCode@b70b4ee54b93fab76596da5809f3e71c617fa5c2` freeze, verify reference mesh integrity and pin the other release revision; do not assume equivalence from matching instance names. The broader `3DCodeData/` includes 12,720 seeded training instances whose geometry is also **not automatically identical** to the canonical `_seed0` benchmark tasks.
+
+Run `upstream_shape_adapter --upstream ... --refs ...` **only after** the six scorer-private GLBs have been validated. Record both a conditional score (only valid meshes) and a six-task failure-inclusive score, while preserving each missing task's original `UNKNOWN` status in the native execution report. Even a successful Chamfer calculation remains **NONCOMPARABLE to the upstream official code-executability leaderboard** because this experiment uses a strict AST subset and Blender 5.2.3 rather than the upstream free-Python Blender 5.0 execution path.
+
 ## Trusted upstream shape scorer bridge (Wave 2)
 
 [PR #49](https://github.com/daniele21/3d-rendering-llm/pull/49) adds a native .blend → GLB exporter executed only from audited source with Blender autoexec disabled, and an adapter for upstream 3DCodeBench `metrics/shape_chamfer.py` pinned at Git commit `42c7780ed3fcbd466f17f058f62e7996233777f7`. Positive native export and source non-mutation verified in [Mac run 40698095542](https://github.com/daniele21/local-runner-infra/actions/runs/40698095542). The adapter refuses scoring without every expected real scorer-private reference GLB, a matching repository commit and six-task denominator. It does **not** execute hidden reference factory Python or any LLM Python on the Mac mini.
