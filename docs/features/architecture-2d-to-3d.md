@@ -1,6 +1,6 @@
 # ARCH-01 / ARCH-02 — Structured 2D → 3D architecture vertical
 
-Status: **DESIGN / NOT IMPLEMENTED** · 2026-10-28. This is **not** the existing generated-2D-reference experiment [EX-03 #10](https://github.com/daniele21/3d-rendering-llm/issues/10), which remains separate. Primary roadmap: [workstream](../workstreams/geometry-harness.md).
+Status: **FIRST RESTRICTED DXF WALL SLICE IMPLEMENTED, REAL MAC PASS; COMPLETE ARCH-01 STILL OPEN** · 2026-10-28. This is **not** the existing generated-2D-reference experiment [EX-03 #10](https://github.com/daniele21/3d-rendering-llm/issues/10), which remains separate. Primary roadmap: [workstream](../workstreams/geometry-harness.md).
 
 ## First implemented slice — ARCH-01
 
