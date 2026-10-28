@@ -2,8 +2,10 @@
 
 **No model calls in this change.** The immutable historical GPT-6 Luna run
 remains 2/6 with status INCOMPLETE. Separate 3/3 native scene recoveries make
-5/6 a *counterfactual*, not a measured production rate. Their shape quality is
-UNKNOWN until the private offline scorer runs.
+5/6 a *counterfactual*, not a measured production rate. The independent
+per-task Chamfer scorer has now **passed its matched original-scene control**
+on the operator Mac (see results below). Visual/semantic fidelity remains
+UNKNOWN; this does not represent an official 3DCodeBench leaderboard score.
 
 ## Normalization in normal workflows
 
@@ -202,7 +204,7 @@ pair score gate fails as expected when the upstream scorer advances one RNG
 across the now-five successful tasks; no reference/scorer provenance mismatch
 was observed.
 
-### A new reproducible per-task sampling protocol (operator action pending)
+### A new reproducible per-task sampling protocol (operator PASS)
 
 The repo now includes `geometry_harness.evaluation.paired_task_shape`: it
 first **revalidates the entire same private evidence chain** and the published
@@ -236,3 +238,64 @@ The baseline and counterfactual conditional means still cover 2 vs 5 valid
 scenes and are not identical-task paired *quality improvements*. This new
 protocol gives invariant per-task sampled CD regardless of task omissions;
 the original run's historical CD remains unchanged.
+
+## Verified operator per-task scoring result (2026-10-28)
+
+**Status:** `PER_TASK_RNG_ISOLATED_REPRODUCIBLE` on the authorized Mac.
+The unchanged pinned scorer was invoked independently for every generated task
+with `--seed 0 --n-points 8192`. There were 2 baseline scoring calls and
+5 counterfactual scoring calls, **0 new model calls**. Both original shared
+GLBs (CoffeeTable/Balloon) matched the new baseline exactly, establishing
+`baseline_shared_tasks_exact_match: true`. Historical scored evidence and
+the earlier descriptive 5-scene result remain untouched.
+
+| Task | Original native scene | Counterfactual native scene | CD per-task | CD yaw-min | Best yaw |
+| --- | --- | --- | ---: | ---: | ---: |
+| CoffeeTable_seed0 | OK | OK | 0.04448809481252921 | 0.04448809481252921 | 0° |
+| ArmChair_seed0 | NO_GEN_GLB | OK | 0.036163656143278496 | 0.036163656143278496 | 0° |
+| Bottle_seed0 | NO_GEN_GLB | OK | 0.012679019359197156 | 0.012679019359197156 | 0° |
+| AquariumTank_seed0 | NO_GEN_GLB | OK | 0.04923519730128536 | 0.028346598152854535 | 90° |
+| Balloon_seed0 | OK | OK | 0.6346081023071021 | 0.5759648164497149 | 270° |
+| BrainCoral_seed0 | NO_GEN_GLB | NO_GEN_GLB | N/A | N/A | N/A |
+
+**Verified operator output:** `n_baseline_scored=2`,
+`n_candidate_scored=5`,
+`candidate_cd_conditional_mean_new_protocol=0.15543481398467845`.
+
+Three recovered scenes have CD mean `0.032692624267920335`; this is a
+**descriptive subset statistic** (original baseline has no generated GLB for
+these objects), not a matched improvement in model geometry quality. Balloon
+contributes ~81.7% of the total raw CD over five successful tasks, and the
+other four scene CD mean is ~0.03564149; a holistic mean alone obscures this
+outlier. Normalized unit-sphere Chamfer deliberately discards absolute
+real-world scale and does not validate materials, topology, editability,
+object semantics, precise dimensions or prompt-level requirements.
+
+The original historical scorer CD for CoffeeTable was 0.04215983617482963,
+versus the *new* independent per-task protocol's 0.04448809481252921.
+This discrepancy is due to the sampling protocol changing; it does not
+invalidate the new **within-protocol** exact match of 0.04448809481252921
+for original versus candidate CoffeeTable. Balloon is exactly
+0.6346081023071021 in both new groups. NEVER silently rewrite the original
+historical metric or present the 2/6 and 5/6 means as causal quality gains.
+
+**Operator-reported SHA-256 generated GLBs** (new protocol):
+- CoffeeTable: `9172fd95b587f52374233d6d9788106a418f400074a8ffcc144402be7a0d1345`
+- ArmChair: `1f6bbb5b91f40be381a32ed11697a61a5a863fafc541e5d960533e6532240a0e`
+- Bottle: `748f8737b09da25a3c93f29dccad54ff43f64c8d9b8262add93d4baee63fba3b`
+- AquariumTank: `6c6c51da584a5969f7274ff1fe6f8572f71818d43e3a996c3f1dcec738ee4c93`
+- Balloon: `10224636e4c2de720d1a664dd54efe656fddcc340c52bf01d4ad3f33eddd6bb3`
+
+The complete private report is:
+`~/geometry-evidence/luna-six-per-task-chamfer-01/paired-one-task-chamfer.json`.
+Source geometry, meshes, prompts and raw private score logs are intentionally
+not committed to this public repository.
+
+**Remaining gates before merging PR #66 or claiming G1 production quality:**
+run the real-Mac normalizer/ID regression with independent Blender reopen,
+visually inspect prompt-conditioned four-view renders for the three recovered
+scenes and Balloon against approved references, record semantic geometry
+criteria and per-scene FAIL/PASS/UNKNOWN with evidence identifiers, and
+explicitly decide whether to attempt BrainCoral's separately authorized
+token-budget experiment. Do not extrapolate this six-sample smoke to
+broader benchmark or partner/customer use.
