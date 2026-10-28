@@ -22,6 +22,25 @@ The first six are intentionally heterogeneous in geometry (furniture, containers
 
 Source dataset card [3DCode](https://huggingface.co/datasets/YipengGao/3DCode) currently lists MIT and describes Infinigen BSD-3-Clause provenance for factory code. Review notices/re-use rights before redistribution or commercial benchmarking. Reference scripts are held in a temporary scorer-only source folder and deleted immediately after public prompt staging.
 
+## First live run — 2026-10-28
+
+[Central GitHub Actions run 40683850012](https://github.com/daniele21/local-runner-infra/actions/runs/40683850012): six real `gpt-6-luna` API calls, **2/6** accepted native Blender scenes, estimated model token spend **USD $0.004875300**. Provider cost ledger `COMPLETE`, all six attempts counted. Private GCS upload step SUCCESS; **strict CI gate FAILED**, because the initial source erroneously counted the last billable failed task as making the six-task suite incomplete. Corrected for future experiments in [PR #32](https://github.com/daniele21/3d-rendering-llm/pull/32) without running another paid inference. The historical failed run remains unchanged.
+
+The observed pass fraction is an INTERNAL safe-AST native-scene metric, **not official visual/3DCodeBench shape or semantic similarity**; those remain UNKNOWN. No quality-improvement comparison to Sol is valid yet, as earlier Sol trials used a different prompt.
+
+GCS evidence prefix (private):
+`gs://project-tests-498508-geometry-showcase/geometry-harness/g1/be1a888dea819925cb855d95c18f4d75c0e934ce/40683850012-attempt-1/g1-benchmark/`
+
+Read without additional model calls (requires your GCS reader permissions):
+
+```bash
+ROOT="gs://project-tests-498508-geometry-showcase/geometry-harness/g1/be1a888dea819925cb855d95c18f4d75c0e934ce/40683850012-attempt-1/g1-benchmark"
+gcloud storage cat "$ROOT/benchmark.json" | jq '{status,attempted,scene_passes,aborted_reason,task_results}'
+gcloud storage cat "$ROOT/cost-summary.json" | jq '{grand_total_status,recorded_calls,priced_subtotal_usd,by_model_stage}'
+```
+
+Combined eight recorded API calls: 2 historical Sol ($0.018374000) + 6 Luna ($0.004875300) = **USD $0.023249300** model-token estimates, NOT provider billing/infra invoices.
+
 ## First experiment contract
 
 `python -m geometry_harness.benchmark_smoke --output ... --public-root ... --suite ...`
