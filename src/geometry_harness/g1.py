@@ -24,6 +24,7 @@ from geometry_harness.costs.ledger import default_ledger_path, load_events, reco
 from geometry_harness.providers.compatible import OpenAICompatibleCodeProvider, ProviderError
 from geometry_harness.strategies.bpy_subset import compile_bpy_subset, UnsafeGeneratedCode
 from geometry_harness.telemetry.spans import TraceRecorder, write_summary
+from geometry_harness.telemetry.review import review as review_trace, make_html as trace_html
 from geometry_harness.validation.issues import validate as validate_geometry
 
 
@@ -220,6 +221,10 @@ def create_g1(root: Path, *, fixture_source: str | None = None) -> dict:
         checks = [{"name": "safe_g1_accepted", "status": "FAIL", "detail": errors[0]}]
     cost = _cost_summary(root)
     performance = write_summary(root)
+    trace_review = review_trace(root)
+    (root / "trace-review.json").write_text(
+        json.dumps(trace_review, indent=2) + "\n", encoding="utf-8")
+    (root / "timeline.html").write_text(trace_html(trace_review), encoding="utf-8")
     if fixture_source is None:
         if cost is None or cost.get("grand_total_status") != "COMPLETE":
             status = "FAIL"
@@ -230,6 +235,7 @@ def create_g1(root: Path, *, fixture_source: str | None = None) -> dict:
                  "artifacts/geometry.json", "contact-sheet.png",
                  "index.html", "assertions.json", "costs/events.jsonl",
                  "cost-summary.json", "trace.jsonl", "performance-summary.json",
+                 "trace-review.json", "timeline.html",
                  "geometry-issues.json", "views/views-manifest.json",
                  "views/front.png", "views/side.png", "views/top.png", "views/isometric.png",
                  "logs/build.txt", "logs/inspect.txt", "logs/views.txt")
