@@ -25,6 +25,8 @@ from geometry_harness.evaluation.benchmark_evidence import EXPECTED_IDS, EXPECTE
 ARCHIVE_REPO = "3dcodebench/3dcodebench"
 ARCHIVE_SHA = "e01cafff7b85a730424c0d053aefec09144eb0b5"
 ARCHIVE_FILENAME = "3dcodebench_v1.tar.gz"
+# Published release checksum from the dataset croissant.json; pinned release metadata.
+ARCHIVE_SHA256 = "459944518cb6e5f2a1f8de70ab273f557f4fe243b5dba7b44bb50c0e7b9563bc"
 BENCHMARK_REPO = "YipengGao/3DCode"
 BENCHMARK_SHA = EXPECTED_DATASET
 TEXT_LIMIT = 4 * 1024 * 1024
@@ -174,6 +176,8 @@ def verify_archive(archive: Path, source_root: Path, output: Path,
         with archive.open("rb") as stream:
             while block := stream.read(1024 * 1024):
                 archive_digest.update(block)
+        if remote_archive_verified and archive_digest.hexdigest() != ARCHIVE_SHA256:
+            raise ReferenceGateError("Pinned public archive digest differs from published checksum")
         rows = []
         for task in EXPECTED_IDS:
             rows.append({
@@ -191,6 +195,8 @@ def verify_archive(archive: Path, source_root: Path, output: Path,
             "declared_archive_commit": ARCHIVE_SHA,
             "archive_filename": ARCHIVE_FILENAME,
             "archive_sha256": archive_digest.hexdigest(),
+            "published_archive_sha256": ARCHIVE_SHA256,
+            "published_archive_checksum_match": archive_digest.hexdigest() == ARCHIVE_SHA256,
             "archive_download_verified_at_pinned_revision": remote_archive_verified,
             "frozen_benchmark_repository": BENCHMARK_REPO,
             "frozen_benchmark_commit": BENCHMARK_SHA,
