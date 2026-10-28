@@ -129,6 +129,14 @@ def score(output: Path, upstream: Path, refs: Path) -> dict:
             raise ShapeGateError("Reference mesh does not match validated archive manifest")
         ref_inventory.append({"task_id":name,"sha256":_sha(file)})
     script=upstream/"metrics"/"shape_chamfer.py"
+    # A pinned HEAD alone is insufficient: local tracked files can be edited.
+    # Verify the exact scorer script blob at the frozen commit before running
+    # any third-party Python in the isolated scorer environment.
+    expected_source=subprocess.run(
+        ["git","-C",str(upstream),"show",UPSTREAM_COMMIT+":metrics/shape_chamfer.py"],
+        capture_output=True, timeout=5, check=True).stdout
+    if _sha(script) != hashlib.sha256(expected_source).hexdigest():
+        raise ShapeGateError("Pinned upstream scorer script modified or inconsistent with Git commit")
     target=output/"results"/"text_to_3D"
     # Disable network-dependent environment secrets in the scorer process.
     env={k:v for k,v in os.environ.items() if not (
