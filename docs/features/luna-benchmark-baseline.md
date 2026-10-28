@@ -22,6 +22,24 @@ The first six are intentionally heterogeneous in geometry (furniture, containers
 
 Source dataset card [3DCode](https://huggingface.co/datasets/YipengGao/3DCode) currently lists MIT and describes Infinigen BSD-3-Clause provenance for factory code. Review notices/re-use rights before redistribution or commercial benchmarking. Reference scripts are held in a temporary scorer-only source folder and deleted immediately after public prompt staging.
 
+## First live six-task result (2026-10-28)
+
+- [Central run 40683850012](https://github.com/daniele21/local-runner-infra/actions/runs/40683850012): six real GPT-6 Luna calls, **2 of 6** valid Blender-native scenes (33.3% of six task slots), estimated **USD 0.004875300** model-token cost; ledger `COMPLETE`.
+- Private GCS upload step succeeded; the **strict CI job failed** because the original source runner marked the final rejected model response as an incomplete benchmark even though all six requests and their costs were recorded. [Fix PR #32](https://github.com/daniele21/3d-rendering-llm/pull/32) updates future runs to count fully costed task-level failures as valid FAIL results. The historic run remains FAILED and is not silently rewritten.
+- Original evidence prefix (private): `gs://project-tests-498508-geometry-showcase/geometry-harness/g1/be1a888dea819925cb855d95c18f4d75c0e934ce/40683850012-attempt-1/g1-benchmark/`.
+- Preliminary executable scene rate 33.3%; **official semantic fidelity, image and 3D similarity remain UNKNOWN** because official upstream scorers have not run. The restricted safe primitives impose a limitation on open-ended procedural tasks.
+- Cumulative recorded token-cost estimate across **two Sol + six Luna** requests: **USD 0.023249300**; not a provider invoice, cloud storage or Mac compute cost.
+
+### Read-only audit of original private GCS evidence
+
+```bash
+ROOT="gs://project-tests-498508-geometry-showcase/geometry-harness/g1/be1a888dea819925cb855d95c18f4d75c0e934ce/40683850012-attempt-1/g1-benchmark"
+gcloud storage cat "$ROOT/benchmark.json" | jq '{status,attempted,scene_passes,aborted_reason,task_results}'
+gcloud storage cat "$ROOT/cost-summary.json" | jq '{grand_total_status,recorded_calls,priced_subtotal_usd,by_model_stage}'
+```
+
+These commands read historic evidence; they do not invoke models or change costs. Access requires existing private-bucket reader permissions.
+
 ## First experiment contract
 
 `python -m geometry_harness.benchmark_smoke --output ... --public-root ... --suite ...`
