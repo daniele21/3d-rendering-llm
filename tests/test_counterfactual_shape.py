@@ -102,6 +102,7 @@ class CounterfactualScoringTests(unittest.TestCase):
             )
             with patch("geometry_harness.evaluation.counterfactual_shape._preflight",
                        return_value=preflight_result), patch(
+                "geometry_harness.evaluation.counterfactual_shape._precheck_scorer"), patch(
                 "geometry_harness.evaluation.counterfactual_shape.blender_binary", return_value="/fake/blender"), patch(
                 "geometry_harness.evaluation.counterfactual_shape._safe_run", side_effect=fake_export
             ) as exported, patch(
@@ -116,6 +117,103 @@ class CounterfactualScoringTests(unittest.TestCase):
             self.assertIsNone(next(x for x in result["per_instance"]
                                    if x["instance"] == "BrainCoral_seed0")["cd"])
 
+
+    def test_missing_scorer_is_specific_and_fails_before_output(self):
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td)
+            with patch("geometry_harness.evaluation.counterfactual_shape._preflight") as audit:
+                with self.assertRaisesRegex(ShapeGateError, "Pinned scorer not found"):
+                    run(p/"original", p/"baseline", p/"derived", p/"out",
+                        upstream=p/"incorrect-checkout", refs=p/"refs")
+                audit.assert_not_called()
+            self.assertFalse((p/"out").exists())
+
+    def test_resume_staged_glbs_without_exporting_again(self):
+        import hashlib
+        from geometry_harness.evaluation.counterfactual_shape import (
+            _validate_resumable_stage, EXPERIMENT,
+        )
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            out = root / "new-cohort"
+            base = out / "results" / "text_to_3D" / "gpt-6-luna"
+            base.mkdir(parents=True)
+            originals, derived = {}, {}
+            rows = []
+            for task in EXPECTED_IDS:
+                target = base / task
+                target.mkdir()
+                row = {"task_id": task, "native_scene": "FAIL", "generated_glb": None}
+                if task != "BrainCoral_seed0":
+                    glb = target / "glb" / f"{task}.glb"
+                    glb.parent.mkdir()
+                    glb.write_bytes(b"glTF" + task.encode())
+                    row["native_scene"] = "PASS"
+                    row["shape_status"] = "READY_FOR_ISOLATED_REFERENCE_SCORER"
+                    row["source_cohort"] = "original" if task in ORIGINAL_VALID else "name_only_derived"
+                    row["generated_glb"] = {
+                        "path": str(glb.relative_to(out)), "bytes": glb.stat().st_size,
+                        "sha256": hashlib.sha256(glb.read_bytes()).hexdigest()}
+                    if task in ORIGINAL_VALID:
+                        original = root / (task + ".glb")
+                        original.write_bytes(glb.read_bytes())
+                        originals[task] = original
+                    else:
+                        expected = [f"part_{task}"]
+                        (target/"expected.json").write_text(json.dumps({"object_ids": expected}))
+                        (target/"export.log").write_text("trusted fixture export")
+                        derived[task] = (root / (task + ".blend"), expected)
+                rows.append(row)
+            historical = {"source_sha":"hash", "dataset_revision":"revision",
+                          "model_estimated_usd":"0.004875300", "original_run_status":"INCOMPLETE"}
+            stage = {"schema_version":1, "experiment":EXPERIMENT,
+                     "model":"gpt-6-luna","upstream_commit":UPSTREAM_COMMIT,
+                     "source_sha":"hash", "dataset_revision":"revision",
+                     "source_cost_estimated_usd":"0.004875300",
+                     "original_run_status":"INCOMPLETE","original_native_pass":2,
+                     "native_pass":5, "model_calls":0,
+                     "quality_status":"UNKNOWN_NOT_SHAPE_SCORED",
+                     "expected_tasks":list(EXPECTED_IDS),"tasks":rows}
+            (out/"scorer-staging.json").write_text(json.dumps(stage))
+            self.assertEqual(_validate_resumable_stage(out, historical, originals, derived), stage)
+            old = metrics()
+            for entry in old["per_instance"]:
+                if entry["instance"] not in ORIGINAL_VALID:
+                    entry.update(status="NO_GEN_GLB", cd=None, cd_yawmin=None)
+            old["n_ok"] = 2
+            provenance = {
+                "upstream_commit": UPSTREAM_COMMIT,
+                "upstream_shape_scorer_sha256": "a" * 64,
+                "reference_glb_sha256": [{"task_id": t, "sha256": "b" * 64} for t in EXPECTED_IDS],
+            }
+            def fake_score(output, upstream, refs):
+                target = base / "_metrics"
+                target.mkdir()
+                (target/"shape_chamfer.json").write_text(json.dumps(metrics()))
+                (out/"shape-scorer-provenance.json").write_text(json.dumps({
+                    **provenance, "scorer_status": "UPSTREAM_SHAPE_CHAMFER_EXECUTED"}))
+            with patch("geometry_harness.evaluation.counterfactual_shape._preflight",
+                       return_value=(historical, provenance, old, originals, derived)), patch(
+                "geometry_harness.evaluation.counterfactual_shape._precheck_scorer"), patch(
+                "geometry_harness.evaluation.counterfactual_shape.blender_binary") as blender, patch(
+                "geometry_harness.evaluation.counterfactual_shape._safe_run") as export, patch(
+                "geometry_harness.evaluation.counterfactual_shape.score", side_effect=fake_score):
+                result = run(root, root, root, out, upstream=root, refs=root, resume=True)
+                blender.assert_not_called()
+                export.assert_not_called()
+            self.assertEqual(result["shape_status"], "SCORED_PINNED_COUNTERFACTUAL")
+            self.assertEqual(result["n_scored"], 5)
+            # Neither an existing result nor a tampered staged file can be resumed.
+            with self.assertRaisesRegex(ShapeGateError, "unscored"):
+                _validate_resumable_stage(out, historical, originals, derived)
+            (out/"counterfactual-shape-results.json").unlink()
+            (out/"shape-scorer-provenance.json").unlink()
+            (base/"_metrics"/"shape_chamfer.json").unlink()
+            (base/"_metrics").rmdir()
+            tampered = base / TASK_IDS[0] / "glb" / f"{TASK_IDS[0]}.glb"
+            tampered.write_bytes(b"glTFnot-the-original")
+            with self.assertRaisesRegex(ShapeGateError, "SHA/size mismatch"):
+                _validate_resumable_stage(out, historical, originals, derived)
 
 if __name__ == "__main__":
     unittest.main()
