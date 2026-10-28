@@ -54,6 +54,12 @@ Milestones are **acceptance gates**, not a prohibition on parallel isolated impl
 
 **Execution order for value:** baseline + tracing → cheap validator → typed revision/scoped repair → adaptive repair/meta-tools if measured → local vs cloud and structured-CAD vertical → partner integration after discovery. A local provider probe and synthetic DXF fixture may begin in parallel, but no claims of comparative improvement until the appropriate baseline exists.
 
+### BH-02 next gate — reference provenance (2026-10-28)
+
+- PR #58 adds an **opt-in**, scorer-only exact public archive reference gate to bridge the historic operator-verified six-task Luna dataset with 3DCodeBench metrics. The alternative public dataset contains one ~1.95 GB archive at `e01cafff7b85a730424c0d053aefec09144eb0b5`; the original frozen prompt/factory commit is separately `b70b4ee54b93fab76596da5809f3e71c617fa5c2`.
+- It streams (without `extractall`) **only six GLBs**, demands 18 exact byte matches (6 factory scripts + 12 prompt files) and records source/archive/GLB SHA256. A mismatch invalidates reference comparability rather than generating a fake metric. No factory/model script is executed.
+- The pinned external Chamfer scorer now rejects missing/mismatched reference provenance and dirty scorer scripts. Offline contracts PASS; **the archive has not been downloaded and no real reference matching/score has been run** in this PR. Runbook: `docs/features/luna-shape-scoring-runbook.md`. User's historic private GCS audit is already verified; local two-scene GLB export is the next no-inference operation.
+
 ### Wave 3 implementation checkpoint (2026-10-28)
 
 - **ARCH-01 / #51, #54:** strict ASCII DXF in mm/cm/m, only explicitly mapped WALLS/A-WALL entities, 2D axis-aligned LINE and open LWPOLYLINE. Bounded wall count, dimensions, entity types; no external references, scripts or customer data. Synthetic 6×4m four-wall room → trusted Blender mesh native reopen and independent dimensions PASS on Mac mini [40702702395](https://github.com/daniele21/local-runner-infra/actions/runs/40702702395), 145 GCS objects. **No** door, window, rotation, topological closure or multi-story handling claimed.

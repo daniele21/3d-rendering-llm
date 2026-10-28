@@ -19,6 +19,9 @@ import sys
 from geometry_harness.cli import blender_binary
 from geometry_harness.g1 import _safe_run
 from geometry_harness.evaluation.benchmark_evidence import audit, EXPECTED_IDS
+from geometry_harness.evaluation.reference_provenance import (
+    ARCHIVE_SHA, BENCHMARK_SHA, ReferenceGateError,
+)
 
 UPSTREAM_COMMIT="42c7780ed3fcbd466f17f058f62e7996233777f7"
 EXPORT=Path(__file__).resolve().parents[1]/"blender"/"export_verified_glb.py"
@@ -93,14 +96,47 @@ def score(output: Path, upstream: Path, refs: Path) -> dict:
                           capture_output=True,text=True,timeout=5,check=True).stdout.strip()
     if commit!=UPSTREAM_COMMIT:
         raise ShapeGateError("Upstream scorer checkout is NOT the pinned commit")
+    # An arbitrary GLB with the correct filename is NOT a valid benchmark
+    # reference. Demand the six-sample provenance gate matching all pinned
+    # upstream factory and prompt bytes, then rehash each scorer-only mesh.
+    provenance_file=refs/"reference-provenance.json"
+    if provenance_file.is_symlink() or not provenance_file.is_file():
+        raise ShapeGateError("Verified scorer-only reference provenance required")
+    provenance=json.loads(provenance_file.read_text(encoding="utf-8"))
+    if (provenance.get("schema_version") != 1
+        or provenance.get("status") !=
+            "SIX_REFERENCE_PROMPTS_AND_SCRIPTS_MATCH_PINNED_DATASET"
+        or provenance.get("frozen_source_download_verified_at_pinned_revision") is not True
+        or provenance.get("declared_archive_commit") != ARCHIVE_SHA
+        or provenance.get("frozen_benchmark_commit") != BENCHMARK_SHA
+        or not isinstance(provenance.get("archive_sha256"),str)
+        or len(provenance["archive_sha256"]) != 64):
+        raise ShapeGateError("Reference archive prompt/factory revision provenance unverified")
+    reference_rows=provenance.get("refs")
+    if not isinstance(reference_rows,list) or len(reference_rows) != len(EXPECTED_IDS):
+        raise ShapeGateError("Missing six pinned reference mesh identities")
+    reference_by_id={x.get("task_id"):x for x in reference_rows if isinstance(x,dict)}
+    if len(reference_by_id) != len(EXPECTED_IDS) or set(reference_by_id) != set(EXPECTED_IDS):
+        raise ShapeGateError("Unexpected reference category list")
     # Supplied reference meshes are scorer-only. We NEVER execute factory code.
     ref_inventory=[]
     for name in EXPECTED_IDS:
         file=refs/name/"glb"/f"{name}.glb"
         if file.is_symlink() or not file.is_file() or not file.resolve().is_relative_to(refs) or file.read_bytes()[:4]!=b"glTF":
             raise ShapeGateError("All six real scorer-private reference GLBs are required")
+        if (_sha(file) != reference_by_id[name].get("reference_glb_sha256")
+            or file.stat().st_size != reference_by_id[name].get("reference_glb_bytes")):
+            raise ShapeGateError("Reference mesh does not match validated archive manifest")
         ref_inventory.append({"task_id":name,"sha256":_sha(file)})
     script=upstream/"metrics"/"shape_chamfer.py"
+    # A pinned HEAD alone is insufficient: local tracked files can be edited.
+    # Verify the exact scorer script blob at the frozen commit before running
+    # any third-party Python in the isolated scorer environment.
+    expected_source=subprocess.run(
+        ["git","-C",str(upstream),"show",UPSTREAM_COMMIT+":metrics/shape_chamfer.py"],
+        capture_output=True, timeout=5, check=True).stdout
+    if _sha(script) != hashlib.sha256(expected_source).hexdigest():
+        raise ShapeGateError("Pinned upstream scorer script modified or inconsistent with Git commit")
     target=output/"results"/"text_to_3D"
     # Disable network-dependent environment secrets in the scorer process.
     env={k:v for k,v in os.environ.items() if not (
@@ -122,6 +158,8 @@ def score(output: Path, upstream: Path, refs: Path) -> dict:
              "upstream_shape_scorer_sha256":_sha(script),
              "dataset_revision":report["dataset_revision"],
              "reference_glb_sha256":ref_inventory,
+             "reference_provenance_status":provenance["status"],
+             "reference_archive_sha256":provenance["archive_sha256"],
              "original_run_status":report["original_run_status"],
              "n_instances":result["n_instances"],"n_scored":result["n_ok"],
              "conditional_mean":result["cd"]["conditional_mean"],
