@@ -56,6 +56,9 @@ if [[ -f pyproject.toml ]]; then
   GEOMETRY_REPAIR_FIXTURE_DIR="$PWD/ci-artifacts/showcase/repair-fixture" \
     python3 -m unittest discover -s tests/e2e -p 'test_scoped_repair_blender.py' -v
   echo "EDIT-01 native single-object repair and source-preserving rollback verified."
+  GEOMETRY_SHAPE_FIXTURE_DIR="$PWD/ci-artifacts/showcase/glb-fixture" \
+    python3 -m unittest discover -s tests/e2e -p 'test_native_glb_export.py' -v
+  echo "BH-02 GLB export validated, no scorer scripts/AI executed."
   echo "G0 verified on real Blender; outputs in ci-artifacts/showcase/g0."
   exit 0
 fi
