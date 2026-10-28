@@ -51,6 +51,9 @@ def freeze(output: Path, selection_file: Path):
         output.mkdir(parents=True)
         suite_file = output / "suite.json"
         suite_file.write_text(json.dumps(suite, indent=2, sort_keys=True) + "\n")
+        actual_suite_hash = hashlib.sha256(suite_file.read_bytes()).hexdigest()
+        if actual_suite_hash != pinned.get("expected_suite_sha256"):
+            raise ValueError("Verified benchmark suite fingerprint changed: freeze rejected")
         public = stage(root, suite_file, "smoke", output / "generator-public-smoke")
         assert public["task_ids"] == smoke
         report = {
