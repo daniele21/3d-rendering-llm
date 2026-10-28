@@ -41,7 +41,7 @@ class ShapeAdapterTests(unittest.TestCase):
             (upstream/"metrics"/"shape_chamfer.py").write_text("# pinned code location")
             refs=base/"refs"
             refs.mkdir()
-            from geometry_harness.evaluation.reference_provenance import ARCHIVE_SHA, BENCHMARK_SHA
+            from geometry_harness.evaluation.reference_provenance import ARCHIVE_SHA, ARCHIVE_SHA256, BENCHMARK_SHA
             from geometry_harness.evaluation.benchmark_evidence import EXPECTED_IDS
             (refs/"reference-provenance.json").write_text(json.dumps({
                 "schema_version":1,
@@ -49,7 +49,9 @@ class ShapeAdapterTests(unittest.TestCase):
                 "frozen_source_download_verified_at_pinned_revision":True,
                 "declared_archive_commit":ARCHIVE_SHA,
                 "frozen_benchmark_commit":BENCHMARK_SHA,
-                "archive_sha256":"0"*64,
+                "archive_sha256":ARCHIVE_SHA256,
+                "archive_download_verified_at_pinned_revision":True,
+                "published_archive_checksum_match":True,
                 "refs":[{"task_id":name,"reference_glb_sha256":"1"*64,
                          "reference_glb_bytes":80} for name in EXPECTED_IDS],
             }))

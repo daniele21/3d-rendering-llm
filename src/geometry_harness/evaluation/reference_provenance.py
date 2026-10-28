@@ -25,6 +25,8 @@ from geometry_harness.evaluation.benchmark_evidence import EXPECTED_IDS, EXPECTE
 ARCHIVE_REPO = "3dcodebench/3dcodebench"
 ARCHIVE_SHA = "e01cafff7b85a730424c0d053aefec09144eb0b5"
 ARCHIVE_FILENAME = "3dcodebench_v1.tar.gz"
+# Published release checksum from the dataset croissant.json; pinned release metadata.
+ARCHIVE_SHA256 = "459944518cb6e5f2a1f8de70ab273f557f4fe243b5dba7b44bb50c0e7b9563bc"
 BENCHMARK_REPO = "YipengGao/3DCode"
 BENCHMARK_SHA = EXPECTED_DATASET
 TEXT_LIMIT = 4 * 1024 * 1024
@@ -78,16 +80,16 @@ def _archive_member_info(member: tarfile.TarInfo) -> tuple[str, str] | None:
     parts = PurePosixPath(member.name).parts
     if ".." in parts or member.name.startswith("/"):
         raise ReferenceGateError("Unsafe archive member path")
-    # The archive can have one top-level directory wrapper; only a
-    # suffix data/<task>/... is recognized. No arbitrary content extracted.
+    # Public release: data/<task>/glb/<task>.glb plus flat prompt and
+    # factory files in data/<task>/. Optional top-level archive wrapper.
+    if (len(parts) >= 4 and parts[-4] == "data" and parts[-2] == "glb"
+        and parts[-3] in EXPECTED_IDS and parts[-1] == parts[-3] + ".glb"):
+        return parts[-3], parts[-1]
     if len(parts) < 3 or parts[-3] != "data":
         return None
     task, suffix = parts[-2:]
-    if task not in EXPECTED_IDS:
-        return None
-    if suffix == f"{task}.glb":
-        return task, suffix
-    if suffix in (f"{task}.py", "prompt_description.txt", "prompt_instruction.txt"):
+    if task in EXPECTED_IDS and suffix in (
+        f"{task}.py", "prompt_description.txt", "prompt_instruction.txt"):
         return task, suffix
     return None
 
@@ -174,6 +176,8 @@ def verify_archive(archive: Path, source_root: Path, output: Path,
         with archive.open("rb") as stream:
             while block := stream.read(1024 * 1024):
                 archive_digest.update(block)
+        if remote_archive_verified and archive_digest.hexdigest() != ARCHIVE_SHA256:
+            raise ReferenceGateError("Pinned public archive digest differs from published checksum")
         rows = []
         for task in EXPECTED_IDS:
             rows.append({
@@ -191,6 +195,8 @@ def verify_archive(archive: Path, source_root: Path, output: Path,
             "declared_archive_commit": ARCHIVE_SHA,
             "archive_filename": ARCHIVE_FILENAME,
             "archive_sha256": archive_digest.hexdigest(),
+            "published_archive_sha256": ARCHIVE_SHA256,
+            "published_archive_checksum_match": archive_digest.hexdigest() == ARCHIVE_SHA256,
             "archive_download_verified_at_pinned_revision": remote_archive_verified,
             "frozen_benchmark_repository": BENCHMARK_REPO,
             "frozen_benchmark_commit": BENCHMARK_SHA,
@@ -226,9 +232,12 @@ def main(argv=None) -> int:
         archive = a.archive
         if a.download_archive:
             from huggingface_hub import hf_hub_download
+            # hf_hub_download may return a symlink into its content-addressed
+            # cache. Resolve ONLY in this authenticated pinned-download path;
+            # caller-supplied --archive symlinks still fail closed.
             archive = Path(hf_hub_download(
                 repo_id=ARCHIVE_REPO, repo_type="dataset",
-                revision=ARCHIVE_SHA, filename=ARCHIVE_FILENAME))
+                revision=ARCHIVE_SHA, filename=ARCHIVE_FILENAME)).resolve()
         result = verify_archive(archive, source, a.out,
                                 remote_archive_verified=a.download_archive,
                                 pinned_source_verified=a.source_root is None)

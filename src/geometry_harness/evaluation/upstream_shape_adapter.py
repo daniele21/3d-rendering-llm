@@ -20,7 +20,7 @@ from geometry_harness.cli import blender_binary
 from geometry_harness.g1 import _safe_run
 from geometry_harness.evaluation.benchmark_evidence import audit, EXPECTED_IDS
 from geometry_harness.evaluation.reference_provenance import (
-    ARCHIVE_SHA, BENCHMARK_SHA, ReferenceGateError,
+    ARCHIVE_SHA, ARCHIVE_SHA256, BENCHMARK_SHA, ReferenceGateError,
 )
 
 UPSTREAM_COMMIT="42c7780ed3fcbd466f17f058f62e7996233777f7"
@@ -108,6 +108,9 @@ def score(output: Path, upstream: Path, refs: Path) -> dict:
             "SIX_REFERENCE_PROMPTS_AND_SCRIPTS_MATCH_PINNED_DATASET"
         or provenance.get("frozen_source_download_verified_at_pinned_revision") is not True
         or provenance.get("declared_archive_commit") != ARCHIVE_SHA
+        or provenance.get("archive_download_verified_at_pinned_revision") is not True
+        or provenance.get("archive_sha256") != ARCHIVE_SHA256
+        or provenance.get("published_archive_checksum_match") is not True
         or provenance.get("frozen_benchmark_commit") != BENCHMARK_SHA
         or not isinstance(provenance.get("archive_sha256"),str)
         or len(provenance["archive_sha256"]) != 64):

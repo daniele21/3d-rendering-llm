@@ -33,7 +33,8 @@ def fixture(base: Path, *, change=None, omit=None, symlink=None):
                     continue
                 if (task,name)==change:
                     data+=b"mismatch"
-                key=f"3dcodebench_v1/data/{task}/{name}"
+                key=(f"3dcodebench_v1/data/{task}/glb/{name}" if name.endswith(".glb")
+                     else f"3dcodebench_v1/data/{task}/{name}")
                 info=tarfile.TarInfo(key)
                 if (task,name)==symlink:
                     info.type=tarfile.SYMTYPE
@@ -52,12 +53,14 @@ class ReferenceArchiveTests(unittest.TestCase):
             base=Path(td)
             source,archive=fixture(base)
             report=verify_archive(archive,source,base/"refs",
-                                  remote_archive_verified=True,
+                                  remote_archive_verified=False,
                                   pinned_source_verified=True)
             self.assertEqual(report["status"],
                              "SIX_REFERENCE_PROMPTS_AND_SCRIPTS_MATCH_PINNED_DATASET")
             self.assertEqual(report["frozen_benchmark_commit"],BENCHMARK_SHA)
             self.assertEqual(report["declared_archive_commit"],ARCHIVE_SHA)
+            self.assertFalse(report["published_archive_checksum_match"])
+            self.assertFalse(report["archive_download_verified_at_pinned_revision"])
             self.assertEqual(len(report["refs"]),6)
             self.assertEqual({x["task_id"] for x in report["refs"]},set(EXPECTED_IDS))
             refs=list((base/"refs").rglob("*"))

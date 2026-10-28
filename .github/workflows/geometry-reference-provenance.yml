@@ -1,0 +1,64 @@
+name: Geometry - validate six public 3DCodeBench references (NO AI)
+
+on:
+  push:
+    branches:
+      - feature/bh02-real-reference-provenance-ci
+    paths:
+      - '.github/workflows/geometry-reference-provenance.yml'
+      - 'src/geometry_harness/evaluation/reference_provenance.py'
+      - 'src/geometry_harness/evaluation/upstream_shape_adapter.py'
+      - 'tests/test_reference_provenance.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  six-reference-match:
+    # Downloads one 1.95 GB public archive into runner temporary storage;
+    # NEVER downloads historic private GCS data and NEVER runs factory .py.
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      PYTHONPATH: src
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Check available ephemeral disk (public assets only)
+        run: |
+          df -h "$RUNNER_TEMP"
+          python3 -m pip install --disable-pip-version-check "huggingface_hub>=0.30,<2"
+      - name: Match six real reference meshes against pinned source prompts and factories
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m geometry_harness.evaluation.reference_provenance \
+            --download-archive --out "$RUNNER_TEMP/geometry-reference-scorer-only"
+          python3 - <<'PY'
+          import json, os, pathlib
+          root = pathlib.Path(os.environ["RUNNER_TEMP"]) / "geometry-reference-scorer-only"
+          report = json.loads((root/"reference-provenance.json").read_text())
+          assert report["status"] == "SIX_REFERENCE_PROMPTS_AND_SCRIPTS_MATCH_PINNED_DATASET"
+          assert report["archive_download_verified_at_pinned_revision"] is True
+          assert report["frozen_source_download_verified_at_pinned_revision"] is True
+          assert report["published_archive_checksum_match"] is True
+          assert report["official_score"] is None and report["model_calls"] == 0
+          assert len(report["refs"]) == 6
+          assert sorted(p.name for p in root.rglob("*.glb")) == sorted(
+            x["task_id"]+".glb" for x in report["refs"])
+          assert not list(root.rglob("*.py"))
+          print("Six reference meshes verified against exact frozen public task bytes")
+          print("Pinned archive hash: "+report["archive_sha256"])
+          print("No executable scripts, no model call, no official shape score")
+          PY
+      - name: Publish metadata ONLY — never upload 3D meshes/factory scripts
+        uses: actions/upload-artifact@v4
+        with:
+          name: six-reference-public-provenance-hashes
+          retention-days: 14
+          if-no-files-found: error
+          path: ${{ runner.temp }}/geometry-reference-scorer-only/reference-provenance.json
