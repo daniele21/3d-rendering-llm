@@ -32,6 +32,40 @@ class TraceTests(unittest.TestCase):
         self.assertEqual(root["exclusive_ms"], 3)
         self.assertEqual(r["critical_path"], "UNKNOWN_WITHOUT_DEPENDENCY_EDGES")
 
+    def test_explicit_dag_chain_is_measured_not_inferred(self):
+        with tempfile.TemporaryDirectory() as td:
+            tracer = TraceRecorder(Path(td))
+            with tracer.span("code.compile") as first:
+                pass
+            with tracer.span("blender.build", depends_on=(first.span_id,)) as second:
+                pass
+            with tracer.span("scene.reopen", depends_on=(second.span_id,)):
+                pass
+            report = write_summary(Path(td))
+            self.assertEqual(report["critical_path"], "MEASURED_EXPLICIT_SPAN_DEPENDENCIES")
+            self.assertEqual(report["critical_chain_stages"],
+                             ["code.compile", "blender.build", "scene.reopen"])
+            self.assertGreaterEqual(report["critical_chain_ms"], 0)
+            self.assertLessEqual(report["critical_chain_ms"], report["observed_wall_ms"] + 1)
+
+    def test_dependency_fails_closed_when_unfinished_or_foreign(self):
+        with tempfile.TemporaryDirectory() as td:
+            tracer = TraceRecorder(Path(td))
+            with self.assertRaises(TraceError):
+                with tracer.span("scene.reopen", depends_on=("other-trace",)):
+                    pass
+            with tracer.span("task.run") as root:
+                with self.assertRaises(TraceError):
+                    with tracer.span("scene.reopen", depends_on=(root.span_id,)):
+                        pass
+
+    def test_synthetic_overlapping_siblings_need_explicit_dag(self):
+        e = [ev("a", "started", 0), ev("b", "started", 1000),
+             ev("a", "finished", 4000), ev("b", "finished", 5000)]
+        report = summarize(e)
+        self.assertEqual(report["critical_path"], "UNKNOWN_WITHOUT_DEPENDENCY_EDGES")
+        self.assertIsNone(report["critical_chain_ms"])
+
     def test_missing_end_is_unknown_not_zero(self):
         r = summarize([ev("root", "started", 0, name="task.run")])
         self.assertEqual(r["status"], "INCOMPLETE_UNKNOWN")
