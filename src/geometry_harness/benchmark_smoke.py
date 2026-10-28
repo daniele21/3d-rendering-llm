@@ -149,6 +149,7 @@ def run(output: Path, public_root: Path, suite: Path) -> dict:
             if output_code.pricing is None or output_code.pricing.get("status") != "PRICED":
                 raise ShowcaseError("No verified usage/pricing for provider call")
             if output_code.pricing.get("model") != MODEL:
+                aborted_reason = "UnexpectedProviderModel"
                 raise ShowcaseError("Unexpected returned model; no silent substitution")
             total_model_usd += Decimal(output_code.cost_usd)
             code_path = task_out / "model-generated.py"
@@ -212,8 +213,17 @@ def run(output: Path, public_root: Path, suite: Path) -> dict:
         "model_usd_upper_budget": str(MAX_MODEL_USD),
         "model_estimated_usd": cost["priced_subtotal_usd"] if cost else None,
         "cost_reconciliation": cost["grand_total_status"] if cost else "UNKNOWN",
-        "status": "COMPLETE_INTERNAL_SMOKE" if not aborted_reason and len(records) == MAX_CALLS
-                  and cost and cost["recorded_calls"] == MAX_CALLS else "INCOMPLETE",
+        # A failed/refused/generated-invalid last task is a benchmark FAIL,
+        # not a missing test, PROVIDED all six calls are accounted and priced.
+        # Still reject unknown billing, model mismatch and overspend.
+        "status": "COMPLETE_INTERNAL_SMOKE" if (
+            len(records) == MAX_CALLS and cost is not None
+            and cost["recorded_calls"] == MAX_CALLS
+            and cost["grand_total_status"] == "COMPLETE"
+            and Decimal(cost["priced_subtotal_usd"]) <= MAX_MODEL_USD
+            and aborted_reason not in {"UnexpectedProviderModel", "ActualModelSpendExceeded"}
+        ) else "INCOMPLETE",
+        "task_failures": sum(1 for r in records if r["native_scene"] != "PASS"),
         "aborted_reason": aborted_reason,
         "duration_seconds": round(time.monotonic() - started, 4),
         "source_sha": source_sha(), "platform": platform.platform(),
@@ -237,7 +247,8 @@ def run(output: Path, public_root: Path, suite: Path) -> dict:
     })
     print(json.dumps({k: metric[k] for k in ("status", "attempted", "scene_passes",
                                              "model_calls_recorded", "model_estimated_usd",
-                                             "cost_reconciliation", "quality_status")}))
+                                             "cost_reconciliation", "quality_status",
+                                             "task_failures", "aborted_reason")}))
     return metric
 
 
