@@ -1,6 +1,6 @@
 # PERF-01 — Agent performance, tracing and latency attribution
 
-Status: **DESIGN CONTRACT / NOT IMPLEMENTED** · 2026-10-28. Owner: `src/geometry_harness/telemetry/`. Roadmap: [active workstream](../workstreams/geometry-harness.md). Source cost ledger: [model-cost-observability](model-cost-observability.md).
+Status: **G1 STAGE TRACE + EXPLICIT DEPENDENCY CHAIN IMPLEMENTED, REAL MAC PASS; full run critical DAG OPEN** · 2026-10-28. Per-stage JSONL and cost-call links were integrated in #41; explicit predecessor validated and tested on native Blender [run 40697522356](https://github.com/daniele21/local-runner-infra/actions/runs/40697522356) in #46. Span chain excludes uninstrumented queue/wait/dependencies; it is not a total causal wall-time analysis. Owner: `src/geometry_harness/telemetry/`. Roadmap: [active workstream](../workstreams/geometry-harness.md). Source cost ledger: [model-cost-observability](model-cost-observability.md).
 
 ## Why / scope
 
