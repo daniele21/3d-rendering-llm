@@ -37,9 +37,13 @@ G1 is **not complete** against the sprint acceptance criteria until a pinned 3DC
 
 Shared macOS runners belong to `daniele21/local-runner-infra`; **G0 must be assigned to a Mac mini**, not generic `local-mac-1`. The dedicated central `geometry-mac-mini.yml` uses the existing `[self-hosted, macOS, ARM64, local-shared]` runners, asserts `local-mac-mini-*` runner identity, and checks out a reviewed source SHA. G0 is triggered by an explicit trusted request; G1 paid experiments require a separate approved, one-call request and are never triggered by routine source PRs. The job publishes `ci-artifacts/showcase/` to a **private Google Cloud Storage bucket** through short-lived GitHub OIDC credentials; GitHub Actions artifact quota is not used. The central GCS setup/permissions runbook is in `local-runner-infra/docs/geometry-gcs-artifacts.md`. Hosted template-health CI remains separate. Source status reporting requires `CENTRAL_SOURCE_TOKEN` permission for this repo.
 
-## Next steps
+## Next steps — performance-aware plan (2026-10-28)
 
-Complete S1 with a pinned 3DCodeBench smoke suite and real independent scoring. Expand the validated geometry vocabulary beyond literal cubes **without running arbitrary model Python**. Then S2 multiview geometry and evaluations, S3 structured planner A/B, S4 bounded repair, S5 2D-reference ablation, S6 typed edits/rollback, and S7+ local no-egress LLM/VLM and final Cycles render.
+The single [active roadmap](docs/workstreams/geometry-harness.md) prioritizes **measured latency tracing, deterministic geometry validation, typed scoped repair and rollback, composite-tool A/B, local open-weight execution**, and a separate **structured DXF→3D architecture vertical**. All are **planned**, not currently accepted production features.
+
+The six-task 3DCodeBench freeze and pricing code on main do **not** establish an official quality result until actual independent-scored E2E, source provenance, and Blender compatibility are verified. Keep the safe AST→audited Blender builder (no arbitrary model Python), approved opt-in paid tests, and truthful FAIL/UNKNOWN evidence gates.
+
+Feature contracts: [tracing](docs/features/agent-performance.md) · [repair](docs/features/repair-policy.md) · [efficiency A/B](docs/features/harness-efficiency-experiments.md) · [Architecture DXF](docs/features/architecture-2d-to-3d.md) · [external integration](docs/features/external-integration-contract.md).
 
 - [Current state](docs/current-state.md)
 - [Incremental workstream](docs/workstreams/geometry-harness.md)
