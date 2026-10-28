@@ -54,6 +54,13 @@ Milestones are **acceptance gates**, not a prohibition on parallel isolated impl
 
 **Execution order for value:** baseline + tracing → cheap validator → typed revision/scoped repair → adaptive repair/meta-tools if measured → local vs cloud and structured-CAD vertical → partner integration after discovery. A local provider probe and synthetic DXF fixture may begin in parallel, but no claims of comparative improvement until the appropriate baseline exists.
 
+### Wave 2 implementation checkpoint (2026-10-28)
+
+- **PERF-01 / #46:** explicit predecessor span IDs produce measured stage dependency chains; G1 true Blender E2E + private GCS PASS on Mac mini run 40697522356. Complete causal DAG across queue/provider/network/parallel workers and end-to-end accepted-result wall time remain OPEN.
+- **EDIT-01 / #47:** first bounded `set_location` operation with revision hashes and optimistic preconditions; actual Blender accepted checkpoint and negative rollback confirmed with unchanged non-target identities and source hash, Mac run 40697004192 PASS. Multi-object transactions, rotations, material edits, smarter scoped LLM repair and paired A/B latency/cost remain OPEN.
+- **BH-02 / #49:** trusted autoexec-disabled GLB export for our native scene and exact upstream 3DCodeBench Chamfer commit `42c7780...` adapter, Mac run 40698095542 PASS (130 private GCS artifacts). Source .blend unchanged. First Luna six-task generated outputs still need private-bucket re-audit and six scorer-only reference GLBs in an isolated environment; Blender 5.2 vs official 5.0 comparability remains OPEN.
+- **Cost gate:** 0 additional provider model calls in this wave; historical two Sol and six Luna total estimated USD $0.023249300 persists. No provider invoice/infra reconciliation claimed.
+
 ### Wave 1 implementation checkpoint (2026-10-28)
 
 - **#41 PERF-01:** event spans started/finished with fail-closed incomplete traces and cost ledger ID links; G1 + six-task Luna smoke stage instrumentation merged. Safe monotonic overlap-aware wall/exclusive durations and hashed private GCS evidence PASS on Mac. **DAG critical path, complete total-run root interval, resource counters and visual timeline are NOT DONE.**
