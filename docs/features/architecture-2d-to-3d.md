@@ -2,6 +2,16 @@
 
 Status: **DESIGN / NOT IMPLEMENTED** · 2026-10-28. This is **not** the existing generated-2D-reference experiment [EX-03 #10](https://github.com/daniele21/3d-rendering-llm/issues/10), which remains separate. Primary roadmap: [workstream](../workstreams/geometry-harness.md).
 
+## First implemented slice — ARCH-01
+
+[PR #51](https://github.com/daniele21/3d-rendering-llm/pull/51) and layer gate [#54](https://github.com/daniele21/3d-rendering-llm/pull/54) provide the first real native Blender journey from **synthetic** ASCII DXF. It supports only `LINE` and open `LWPOLYLINE` axis-aligned wall centre-lines on explicit `WALLS`/`A-WALL` layers with DXF `$INSUNITS` mm/cm/m, bounded positions and wall thickness/height. It emits the existing audited `safe_literal_bpy_cube_v1` scene-spec as **data**; no DXF Python scripts execute. The test `tests/fixtures/arch01_room_mm.dxf` makes four named rectangular walls in a 6 × 4m room; the Mac mini [run 40702702395](https://github.com/daniele21/local-runner-infra/actions/runs/40702702395) passed Blender native reopen/dimension checks and 145 private GCS objects. No partner CAD or paid inference.
+
+```bash
+PYTHONPATH=src python3 -m geometry_harness.dxf_safe --input tests/fixtures/arch01_room_mm.dxf --output /tmp/arch01-walls-scene.json
+```
+
+Important limitations: no door/window voids, curved/diagonal walls, multi-story geometry, room-closure semantics or CAD interoperability across arbitrary entities. Supporting all ten ArchitectureBench fixtures and typed targeted edits remains OPEN.
+
 ## Goal / boundaries
 
 User imports structured 2D floorplan and obtains an **editable, measurable native Blender scene**, plus targeted revisions without reparsing/rebuilding everything. Core `geometry_harness` remains domain-agnostic; architecture-specific schema, validators and data are isolated under `domains/architecture/`. Do not present the product as certified CAD/BIM or as guaranteeing building-code compliance.
