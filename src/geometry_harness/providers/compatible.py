@@ -8,6 +8,10 @@ from __future__ import annotations
 
 import ast
 from dataclasses import dataclass
+import time
+
+from geometry_harness.costs.ledger import append_event, default_ledger_path, event_id, utc_now
+from geometry_harness.costs.pricing import price_usage
 import json
 import os
 from urllib.error import HTTPError, URLError
@@ -25,7 +29,9 @@ class GeneratedCode:
     code: str
     input_tokens: int | None
     output_tokens: int | None
-    cost_usd: None = None  # Unknown until an audited pricing source is configured.
+    cost_usd: str | None = None
+    call_id: str = ""
+    pricing: dict | None = None
 
 
 def _endpoint(url: str) -> str:
@@ -88,47 +94,101 @@ class OpenAICompatibleCodeProvider:
             raise ProviderError("Remote inference is disabled")
         if not isinstance(prompt, str) or not prompt.strip() or len(prompt) > 12_000:
             raise ProviderError("Prompt must be nonempty and within 12,000 characters")
-        body = {
-            "model": self.model,
-            "max_completion_tokens": self.max_output_tokens,
-            "reasoning_effort": "low",
-            "messages": [
-                {"role": "system", "content": (
-                    "Write ONLY executable Blender Python 5.0 source code for the user request. "
-                    "Use bpy to build named editable scene objects. No markdown, external files, "
-                    "network calls, subprocesses or download operations. "
-                    "Do not claim a render was generated; output source only."
-                )},
-                {"role": "user", "content": prompt},
-            ],
-        }
-        request = Request(self.endpoint, data=json.dumps(body).encode("utf-8"),
-                          headers={"Authorization": "Bearer " + self._key,
-                                   "Content-Type": "application/json"},
-                          method="POST")
+
+        # Durably record the pending call BEFORE sending the request. A killed
+        # process cannot silently turn an expensive in-flight request into $0.
+        cid = event_id()
+        ledger = default_ledger_path()
+        start = time.monotonic()
+        append_event(ledger, {
+            "schema_version": 1, "event": "started", "call_id": cid,
+            "time_utc": utc_now(), "model_requested": self.model,
+            "stage": os.environ.get("GEOMETRY_COST_STAGE", "blender_code_generation"),
+            "source_sha": os.environ.get("SOURCE_SHA", os.environ.get("GITHUB_SHA", "unknown")),
+            "github_run_id": os.environ.get("GITHUB_RUN_ID"),
+            "backend": "openai_compatible_chat", "provider_host": urlparse(self.endpoint).hostname,
+        })
+        pricing = price_usage(None, model=self.model)
+        actual_model = None
+        request_id = None
+        usage_observed = None
+        outcome = "FAILED_NO_USAGE"
+        result = None
         try:
-            with urlopen(request, timeout=self.timeout) as response:
-                raw = response.read(262145)
-        except HTTPError as exc:
-            raise ProviderError(f"Cloud provider returned HTTP {exc.code}") from None
-        except (URLError, TimeoutError, OSError) as exc:
-            raise ProviderError("Cloud provider unavailable or timed out") from None
-        if len(raw) > 262144:
-            raise ProviderError("Provider response exceeds size limit")
-        try:
-            payload = json.loads(raw)
-            choice = payload["choices"][0]
-            if choice.get("finish_reason") != "stop":
-                raise ProviderError("Model generation incomplete or refused")
-            message = choice["message"]["content"]
-            usage = payload.get("usage") or {}
-            if not isinstance(usage, dict):
-                usage = {}
-            def token(key):
-                value = usage.get(key)
-                return value if type(value) is int and value >= 0 else None
-            return GeneratedCode(model=self.model, code=_extract_code(message),
-                                 input_tokens=token("prompt_tokens"),
-                                 output_tokens=token("completion_tokens"))
-        except (UnicodeDecodeError, json.JSONDecodeError, IndexError, KeyError, TypeError):
-            raise ProviderError("Provider response has no valid generated code") from None
+            body = {
+                "model": self.model, "max_completion_tokens": self.max_output_tokens,
+                "reasoning_effort": "low",
+                "messages": [
+                    {"role": "system", "content": (
+                        "Write ONLY executable Blender Python 5.0 source code for the user request. "
+                        "Use bpy to build named editable scene objects. No markdown, external files, "
+                        "network calls, subprocesses or download operations. "
+                        "Do not claim a render was generated; output source only."
+                    )},
+                    {"role": "user", "content": prompt},
+                ],
+            }
+            request = Request(self.endpoint, data=json.dumps(body).encode("utf-8"),
+                              headers={"Authorization": "Bearer " + self._key,
+                                       "Content-Type": "application/json"},
+                              method="POST")
+            try:
+                with urlopen(request, timeout=self.timeout) as response:
+                    raw = response.read(262145)
+            except HTTPError as exc:
+                outcome = f"HTTP_{exc.code}"
+                raise ProviderError(f"Cloud provider returned HTTP {exc.code}") from None
+            except (URLError, TimeoutError, OSError):
+                outcome = "TRANSPORT_FAILURE"
+                raise ProviderError("Cloud provider unavailable or timed out") from None
+            if len(raw) > 262144:
+                outcome = "INVALID_RESPONSE"
+                raise ProviderError("Provider response exceeds size limit")
+            try:
+                payload = json.loads(raw)
+                actual_model = payload.get("model")
+                request_id = payload.get("id")
+                usage = payload.get("usage")
+                # Preserve only numeric counters for later audits, never raw prompts.
+                if isinstance(usage, dict):
+                    prompt_detail = usage.get("prompt_tokens_details") or {}
+                    output_detail = usage.get("completion_tokens_details") or {}
+                    usage_observed = {
+                        "input_total": usage.get("prompt_tokens"),
+                        "input_cache_read": prompt_detail.get("cached_tokens") if isinstance(prompt_detail, dict) else None,
+                        "input_cache_write": prompt_detail.get("cache_write_tokens") if isinstance(prompt_detail, dict) else None,
+                        "output_total": usage.get("completion_tokens"),
+                        "output_reasoning_subset": output_detail.get("reasoning_tokens") if isinstance(output_detail, dict) else None,
+                    }
+                tier = payload.get("service_tier", "standard")
+                pricing = price_usage(
+                    usage, model=actual_model if isinstance(actual_model, str) else "unreported",
+                    service_tier=tier if isinstance(tier, str) else "unknown",
+                    region="global" if urlparse(self.endpoint).hostname == "api.openai.com" else "unverified",
+                )
+                choice = payload["choices"][0]
+                if choice.get("finish_reason") != "stop":
+                    outcome = "UNFINISHED_RESPONSE"
+                    raise ProviderError("Model generation incomplete or refused")
+                message = choice["message"]["content"]
+                outcome = "INVALID_GENERATED_CODE"
+                code = _extract_code(message)
+                outcome = "COMPLETED" if pricing["status"] == "PRICED" else "COMPLETED_COST_UNKNOWN"
+                result = GeneratedCode(
+                    model=self.model, code=code,
+                    input_tokens=(usage_observed or {}).get("input_total"),
+                    output_tokens=(usage_observed or {}).get("output_total"),
+                    cost_usd=pricing["estimated_usd"], call_id=cid, pricing=pricing,
+                )
+                return result
+            except (UnicodeDecodeError, json.JSONDecodeError, IndexError, KeyError, TypeError):
+                outcome = "INVALID_RESPONSE"
+                raise ProviderError("Provider response has no valid generated code") from None
+        finally:
+            append_event(ledger, {
+                "schema_version": 1, "event": "settled", "call_id": cid,
+                "time_utc": utc_now(), "model_requested": self.model,
+                "model_returned": actual_model, "provider_request_id": request_id,
+                "outcome": outcome, "duration_seconds": round(time.monotonic() - start, 5),
+                "pricing": pricing, "usage_observed": usage_observed,
+            })

@@ -71,6 +71,10 @@ For arms `direct`, `structured-plan`, `direct+multiview-repair`, `2d-generated-r
 
 For scene layouts, verify semantic relationship and placement in Blender (what the lines mean), not merely polygon matching. Do not add CADCraft to any arm unless a future separately justified comparison shows an actual benefit over direct SVG/JSON/Blender outline tooling.
 
+## Per-call model usage cost audit
+
+For every experimental model call (including generator, planner, visual judge, retries and failed calls), preserve the append-only started/settled token ledger and immutable private GCS proof. Price inputs separately as uncached, cached reads, cache writes; output includes reasoning. If usage is incomplete or tariffs are unknown, mark result UNKNOWN and never count it as $0. An A/B comparison with untracked model calls is incomplete. See [model cost observability](model-cost-observability.md).
+
 ## CI and promotion
 
 - **Every edit:** schema/fixture validation, cheap unit and deterministic tests; no paid API or large weight download.
