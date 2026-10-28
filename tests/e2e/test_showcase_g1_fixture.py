@@ -37,6 +37,12 @@ class SafeG1BlenderTests(unittest.TestCase):
         self.assertIn("blender.build", {x["name"] for x in trace["spans"]})
         self.assertIn("scene.reopen", {x["name"] for x in trace["spans"]})
         self.assertEqual(trace["unsettled_span_count"], 0)
+        self.assertEqual(trace["critical_path"], "MEASURED_EXPLICIT_SPAN_DEPENDENCIES")
+        self.assertGreater(trace["critical_chain_ms"], 0)
+        self.assertEqual(trace["critical_chain_scope"], "EXPLICIT_INSTRUMENTED_STAGES_ONLY")
+        self.assertIn("blender.build", trace["critical_chain_stages"])
+        self.assertIn("scene.reopen", trace["critical_chain_stages"])
+        self.assertLessEqual(trace["critical_chain_ms"], trace["observed_wall_ms"] + 1)
         self.assertIn("trace.jsonl", {a["path"] for a in result["artifacts"]})
 
     def test_unsafe_model_code_fails_closed_without_render(self):
