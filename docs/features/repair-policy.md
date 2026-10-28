@@ -1,6 +1,6 @@
 # VAL-01 / REPAIR-01 / ORCH-01 — Deterministic validation and bounded scoped repair
 
-Status: **DESIGN CONTRACT / NOT IMPLEMENTED** · 2026-10-28. Existing trackers: [EX-02 #9](https://github.com/daniele21/3d-rendering-llm/issues/9), [EDIT-01 #11](https://github.com/daniele21/3d-rendering-llm/issues/11). Canonical milestone map: [workstream](../workstreams/geometry-harness.md).
+Status: **FIRST BOUNDED EDIT IMPLEMENTED AND REAL MAC E2E PASS; full repair policy still OPEN** · 2026-10-28. First supported operation: single-object `set_location` (max 0.5 m per axis), guarded by exact original scene spec + .blend SHA, validated after new-process Blender reopen; accepted/rollback artifacts are independent and immutable. Native positive/negative [run 40697004192](https://github.com/daniele21/local-runner-infra/actions/runs/40697004192). Existing trackers: [EX-02 #9](https://github.com/daniele21/3d-rendering-llm/issues/9), [EDIT-01 #11](https://github.com/daniele21/3d-rendering-llm/issues/11). Canonical milestone map: [workstream](../workstreams/geometry-harness.md).
 
 ## Design objective and strict boundaries
 
