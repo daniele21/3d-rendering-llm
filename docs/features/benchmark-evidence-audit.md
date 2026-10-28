@@ -1,6 +1,6 @@
 # Six-task Luna evidence audit (BH-02 first slice)
 
-Status: implemented offline artifact inspector. **Not an official 3DCodeBench scorer, and not yet verified against the private historic GCS bundle.** Does not rerun a model, execute AI Python, or retrieve scorer-private reference factories.
+Status: implemented artifact inspector. **Private historic GCS bundle verified by authorized operator on 2026-10-28 (27/27 objects; 6 task records, 2 native Blender PASS; USD $0.004875300 estimated). NOT an official 3DCodeBench shape/image scorer.** Does not rerun a model, execute AI Python, or retrieve scorer-private reference factories.
 
 ## Evidence gate
 
