@@ -1,6 +1,6 @@
 # G1 model costs — audit and retention policy
 
-Status: cost ledger and price calculator implemented; **no paid G1 call has run yet**. The source of truth for each request is a private JSONL append-only ledger, not an aggregate estimate.
+Status: token ledger and pricing validated on **two real GPT-6.1 Sol calls** as of 2026-10-28: first cost probe $0.014708000 (run 40668374405), first real Blender G1 $0.003666000 (run 40669515643). Combined recorded estimated model-token cost: **$0.018374000**. No official billing reconciliation yet. The source of truth for each request is a private JSONL append-only ledger, not an aggregate estimate.
 
 ## Per-call evidence
 Before outbound HTTP: durable started record (unique call ID, timestamp, model requested, stage, source SHA, GitHub run ID).
@@ -24,7 +24,7 @@ Reuse the existing private bucket, Workload Identity Federation (WIF), SHA-pinne
 - private destination: gs://project-tests-498508-geometry-showcase/geometry-harness/g1/SOURCE_SHA/RUN_ID-attempt-N/g1/costs/
 - upload ledger and report EVEN IF inference or Blender fails, and verify file inventory/hash; G1 cannot pass otherwise.
 
-A manual **one-call cost probe** is introduced by central [PR #11](https://github.com/daniele21/local-runner-infra/pull/11) in the same OIDC-authorized geometry-mac-mini.yml workflow; it has no auto-triggered model calls and does not execute generated Blender Python. **It has not been dispatched or verified with paid usage/GCS yet.** Full G1 3D generation and cloud logging remain a separate acceptance gate. No current run is proof of G1 cost retention. The public source repo must not contain actual usage records or secrets. Keep immutable GCS objects as audit source-of-truth; optionally later ingest them into BigQuery for daily/monthly dashboards and reconciliation with OpenAI Billing and Usage APIs. The ledger is a usage-based estimate, not a full cloud compute or tax invoice.
+A manual **one-call cost probe** is introduced by central [PR #11](https://github.com/daniele21/local-runner-infra/pull/11) in the same OIDC-authorized geometry-mac-mini.yml workflow; it has no auto-triggered model calls and does not execute generated Blender Python. **It has now been verified with real model usage and private GCS logs** on runs 40668374405 and 40669515643. Full G1 3D generation and cloud logging remain a separate acceptance gate. Private GCS inventory and hashes for the two real G1 runs are confirmed in their corresponding GitHub Actions run logs. The public source repo must not contain actual usage records or secrets. Keep immutable GCS objects as audit source-of-truth; optionally later ingest them into BigQuery for daily/monthly dashboards and reconciliation with OpenAI Billing and Usage APIs. The ledger is a usage-based estimate, not a full cloud compute or tax invoice.
 
 ## GPT-6.1 Sol rates used (USD per 1M tokens, snapshot 2026-10-28)
 Standard, global:
