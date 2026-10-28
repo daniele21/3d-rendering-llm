@@ -25,6 +25,41 @@ obj.scale = (.5, 1, 1.5)
 ''')
         self.assertEqual(result["objects"][0]["dimensions"], [1, 2, 3])
 
+    def test_literal_cylinder_geometry_and_bounded_segments(self):
+        result = compile_bpy_subset("""import bpy
+bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=.08, depth=1.3, location=(.3, 0, .65))
+obj = bpy.context.object
+obj.name = "support"
+""")
+        p = result["objects"][0]
+        self.assertEqual(p["kind"], "cylinder")
+        self.assertEqual(p["vertices"], 32)
+        self.assertEqual(p["dimensions"], [.16, .16, 1.3])
+
+    def test_literal_uv_sphere_geometry(self):
+        result = compile_bpy_subset("""import bpy
+bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=12, radius=.4, location=(1, 0, .4))
+obj = bpy.context.object
+obj.name = "knob"
+""")
+        p = result["objects"][0]
+        self.assertEqual(p["kind"], "uv_sphere")
+        self.assertEqual(p["dimensions"], [.8, .8, .8])
+
+    def test_primitives_reject_dynamic_math_and_resource_bombs(self):
+        bad = (
+            "import bpy\nbpy.ops.mesh.primitive_cylinder_add(radius=1 / 0)",
+            "import bpy\nbpy.ops.mesh.primitive_cylinder_add(vertices=1000000)",
+            "import bpy\nbpy.ops.mesh.primitive_uv_sphere_add(segments=1000000)",
+            "import bpy\nbpy.ops.mesh.primitive_uv_sphere_add(radius=-1)",
+            "import bpy\nbpy.ops.mesh.primitive_cylinder_add(vertices=True)",
+            "import bpy\nbpy.ops.mesh.primitive_cylinder_add(material='bad')",
+            "import bpy\nbpy.ops.mesh.primitive_uv_sphere_add(location=(float('nan'), 0, 0))",
+        )
+        for source in bad:
+            with self.subTest(source=source), self.assertRaises(UnsafeGeneratedCode):
+                compile_bpy_subset(source)
+
     def test_forbid_imports_network_file_and_exec(self):
         unsafe = (
             "import os\nos.system('id')",

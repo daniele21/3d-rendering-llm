@@ -1,7 +1,7 @@
 """Compile a deliberately small literal bpy geometry subset to trusted scene data.
 
 IMPORTANT: This module *never* execs, evals, imports or runs generated code.
-Only Python AST of cube primitives and literal object transforms is accepted.
+Only Python AST of bounded cubes, cylinders and UV spheres with literal transforms is accepted.
 Everything else fails closed. Not a general Blender Python security sandbox.
 """
 from __future__ import annotations
@@ -19,6 +19,23 @@ _NAME = re.compile(r"[A-Za-z][A-Za-z0-9_-]{0,47}\Z")
 _TARGETS = {"name", "dimensions", "scale", "location"}
 _ALLOWED_VARS = {"obj", "cube", "part"}
 _MAX_OBJECTS = 48
+_PRIMITIVES = {
+    "bpy.ops.mesh.primitive_cube_add": "cube",
+    "bpy.ops.mesh.primitive_cylinder_add": "cylinder",
+    "bpy.ops.mesh.primitive_uv_sphere_add": "uv_sphere",
+}
+
+def _positive(value, label, maximum):
+    if type(value) not in (int, float) or not math.isfinite(value) or not 0.001 <= value <= maximum:
+        raise UnsafeGeneratedCode(f"{label} must be a finite positive number <= {maximum}")
+    return float(value)
+
+
+def _integer(value, label, low, high):
+    if type(value) is not int or not low <= value <= high:
+        raise UnsafeGeneratedCode(f"{label} must be an integer between {low} and {high}")
+    return value
+
 
 
 def _path(node: ast.AST) -> str:
@@ -61,7 +78,7 @@ def compile_bpy_subset(source: str) -> dict:
       obj.name = "tabletop"
       obj.dimensions = (2, 1, .1)
 
-    Repeated to 1..48 uniquely named cubes. No arbitrary code, loops,
+    Repeated to 1..48 uniquely named primitives. No arbitrary code, loops,
     functions, helper calls, materials, I/O or arbitrary bpy access.
     """
     if not isinstance(source, str) or not 1 <= len(source) <= 160000:
@@ -80,25 +97,41 @@ def compile_bpy_subset(source: str) -> dict:
             raise UnsafeGeneratedCode("Only import bpy is permitted")
         if isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Call):
             call = statement.value
-            if _path(call.func) != "bpy.ops.mesh.primitive_cube_add" or call.args:
+            kind = _PRIMITIVES.get(_path(call.func))
+            if kind is None or call.args:
                 raise UnsafeGeneratedCode("Unsupported Blender operation")
             if current is not None:
                 objects.append(current)
             if len(objects) >= _MAX_OBJECTS:
                 raise UnsafeGeneratedCode("Too many mesh objects")
             attrs = {}
+            kwargs = {"cube": {"size", "location"},
+                      "cylinder": {"radius", "depth", "vertices", "location"},
+                      "uv_sphere": {"radius", "segments", "ring_count", "location"}}[kind]
             for kw in call.keywords:
-                if not kw.arg or kw.arg not in {"size", "location"} or kw.arg in attrs:
-                    raise UnsafeGeneratedCode("Unexpected cube creation argument")
+                if not kw.arg or kw.arg not in kwargs or kw.arg in attrs:
+                    raise UnsafeGeneratedCode("Unexpected primitive creation argument")
                 attrs[kw.arg] = _literal(kw.value)
-            size = attrs.get("size", 2)
-            if type(size) not in (float, int) or not math.isfinite(size) or not .001 <= size <= 30:
-                raise UnsafeGeneratedCode("Cube size outside accepted range")
+            location = _vec(attrs.get("location", (0, 0, 0)), "location")
+            if kind == "cube":
+                size = _positive(attrs.get("size", 2), "cube size", 30)
+                dimensions = [size] * 3
+                geometry = {}
+            elif kind == "cylinder":
+                radius = _positive(attrs.get("radius", 1), "cylinder radius", 15)
+                depth = _positive(attrs.get("depth", 2), "cylinder depth", 30)
+                vertices = _integer(attrs.get("vertices", 32), "cylinder vertices", 8, 64)
+                dimensions = [2 * radius, 2 * radius, depth]
+                geometry = {"radius": radius, "depth": depth, "vertices": vertices}
+            else:
+                radius = _positive(attrs.get("radius", 1), "sphere radius", 15)
+                segments = _integer(attrs.get("segments", 24), "sphere segments", 8, 64)
+                rings = _integer(attrs.get("ring_count", 12), "sphere ring_count", 4, 32)
+                dimensions = [2 * radius] * 3
+                geometry = {"radius": radius, "segments": segments, "ring_count": rings}
             current = {
-                "name": f"cube_{len(objects) + 1}",
-                "kind": "cube",
-                "location": _vec(attrs.get("location", (0, 0, 0)), "location"),
-                "dimensions": [float(size)] * 3,
+                "name": f"{kind}_{len(objects) + 1}", "kind": kind,
+                "location": location, "dimensions": dimensions, **geometry,
             }
             active_var = None
             continue

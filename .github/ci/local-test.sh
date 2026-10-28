@@ -46,6 +46,9 @@ if [[ -f pyproject.toml ]]; then
   # This is a REAL Blender test of a trusted static source fixture, NOT a model run.
   GEOMETRY_G1_FIXTURE_DIR="$PWD/ci-artifacts/showcase/g1-fixture" \
     python3 -m unittest discover -s tests/e2e -p 'test_showcase_g1_fixture.py' -v
+  GEOMETRY_G1_CYLINDER_DIR="$PWD/ci-artifacts/showcase/g1-cylinder-fixture" \
+    python3 -m unittest discover -s tests/e2e -p 'test_g1_primitives.py' -v
+  echo "G1 cylinders and spheres verified with real Blender; zero model calls."
   echo "G1 safe AST->Blender fixture verified with zero model calls."
   echo "G0 verified on real Blender; outputs in ci-artifacts/showcase/g0."
   exit 0
