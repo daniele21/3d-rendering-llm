@@ -89,15 +89,24 @@ def reconcile(events: list[dict]) -> dict:
             raise LedgerError("Settled cost call without corresponding start")
         first = states["started"]
         final = states.get("settled")
-        key = (first.get("model_requested", "unknown"), first.get("stage", "unknown"))
+        # If provider resolved a different model than requested, group by the
+        # actual model used for tariffing. A missing response retains requested.
+        reported_model = (final or {}).get("model_returned")
+        key = (reported_model or first.get("model_requested", "unknown"),
+               first.get("stage", "unknown"))
         g = groups[key]
         g["calls"] += 1
         priced = (final or {}).get("pricing") or {}
         if final is None or priced.get("status") != "PRICED":
             g["unpriced_calls"] += 1
+            observed = (final or {}).get("usage_observed") or {}
             pending.append({"call_id": call_id, "model": key[0], "stage": key[1],
                             "reason": ("not_settled" if final is None else
-                                       priced.get("reason") or final.get("outcome", "unpriced"))})
+                                       priced.get("reason") or final.get("outcome", "unpriced")),
+                            "observed_input_tokens": observed.get("input_total"),
+                            "observed_cached_read_tokens": observed.get("input_cache_read"),
+                            "observed_cached_write_tokens": observed.get("input_cache_write"),
+                            "observed_output_tokens": observed.get("output_total")})
             continue
         tok = priced["tokens"]
         g["priced_calls"] += 1
