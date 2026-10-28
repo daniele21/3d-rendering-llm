@@ -95,3 +95,58 @@ Blender/scorer version comparability. The separate
 and prompts, but it is a different release; never assume equivalence without
 per-task content checks. Do not run reference factory Python or create an
 "official score" from the two exported GLBs alone.
+
+
+## Real public six-reference equivalence PASS — 2026-10-28
+
+[Hosted zero-LLM public provenance CI run 40714389048](https://github.com/daniele21/3d-rendering-llm/actions/runs/40714389048) completed **SUCCESS**. It fetched both exact Hugging Face dataset revisions, streamed the full public ~1.95 GB archive, and verified for **all six** task IDs:
+
+- description and instruction bytes match the frozen source revision;
+- ground-truth factory script bytes match the same frozen source;
+- a well-formed reference GLB exists under `data/<task>/glb/<task>.glb`;
+- the full compressed archive SHA-256 matches the published archive metadata:
+  `459944518cb6e5f2a1f8de70ab273f557f4fe243b5dba7b44bb50c0e7b9563bc`.
+
+The run uploaded only a **public, 1.8 KB provenance JSON artifact** containing hashes: **no meshes, scripts, private GCS data, paid model calls or benchmark scores**. Initial real CI attempts exposed Hugging Face cache symlinks and the public archive's nested `glb/` layout. The final runner fixes these while retaining fail-closed handling of supplied symlinks and of archive mismatches. Offline contracts passed on the final SHA.
+
+**This certifies six reference input identities, not Luna shape similarity.** Ground-truth mesh render correctness, Blender 5.0 comparability and the two generated GLB shapes versus these references remain to be scored.
+
+### Next: scorer-only local setup (existing operator's Mac)
+
+The operator's original six Luna outputs have already been exported privately to:
+`~/geometry-evidence/luna-six-shape-stage/` (CoffeeTable + Balloon GLBs;
+four other task outputs remain without valid native scenes).
+
+On the authorized machine only, outside the generator's worktree:
+
+```bash
+cd ~/Projects/3d-rendering-llm
+git pull --ff-only
+python3 -m venv ~/geometry-evidence/scorer-env
+source ~/geometry-evidence/scorer-env/bin/activate
+python -m pip install "huggingface_hub>=0.30,<2" "numpy>=1.26" "scipy>=1.11" "trimesh>=4.0"
+
+PYTHONPATH=src python -m geometry_harness.evaluation.reference_provenance \
+  --download-archive \
+  --out ~/geometry-evidence/luna-six-reference-glbs
+
+git clone https://github.com/gaoypeng/3dcodebench.git \
+  ~/geometry-evidence/3dcodebench-scorer
+git -C ~/geometry-evidence/3dcodebench-scorer checkout \
+  42c7780ed3fcbd466f17f058f62e7996233777f7
+PYTHONPATH=src python -m geometry_harness.evaluation.upstream_shape_adapter \
+  --out ~/geometry-evidence/luna-six-shape-stage \
+  --upstream ~/geometry-evidence/3dcodebench-scorer \
+  --refs ~/geometry-evidence/luna-six-reference-glbs
+```
+
+The reference download may transfer approximately **1.95 GB** (plus the 18
+small source text/factory files) and uses local disk cache. It must not be
+performed on every CI push or on a model-executing shared runner. The
+`upstream_shape_adapter` verifies both source and scorer code SHA before
+launching the pinned, externally sourced scorer process; keep it in a separate
+restricted environment and never supply model API credentials. Output should
+include `shape-scorer-provenance.json` and upstream `shape_chamfer.json`.
+Conditional and penalized scores must be reported together, including the
+four missing generated GLBs; the result is an *internal noncomparable
+Blender 5.2.3/safe-AST profile*, not official 3DCodeBench leaderboard rank.
