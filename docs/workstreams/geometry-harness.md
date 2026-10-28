@@ -1,168 +1,174 @@
-# Geometry Harness — incremental delivery workstream
+# Geometry Harness — active delivery workstream
 
-Status: active
-Owner: 3d-rendering-llm
-Read when: planning, building, validating or resuming the Geometry Harness.
-Product depth: PRODUCT_STRATEGIC (new product, runtime and trust boundary).
-Planning baseline: main at 5710a83aa573e91b1c6285eda0bace43e43720d8 (2026-10-26).
-State (2026-10-28): **S0 / G0 real Mac mini Blender + private GCS E2E PASS; first internal S1 / G1 real GPT-6.1 Sol→safe AST→editable Blender+PNG+cost-ledger E2E PASS. S1 benchmark acceptance remains OPEN** pending frozen 3DCodeBench cohort and independent scoring; later S2–S7+ are not claimed. Exact live runs and billing are recorded in [current-state](../current-state.md).
+Status: **ACTIVE PLAN / NOT IMPLEMENTATION EVIDENCE**
+Owner: `3d-rendering-llm`; source branch: `main`; plan revision: 2026-10-28.
+Single source of truth for milestone priority, dependencies, issue ownership, and acceptance: this document.
+Detailed contracts: [agent-performance](../features/agent-performance.md), [repair-policy](../features/repair-policy.md), [harness-efficiency-experiments](../features/harness-efficiency-experiments.md), [architecture-2d-to-3d](../features/architecture-2d-to-3d.md), [external integration](../features/external-integration-contract.md).
+Verified implementation truth is maintained **only** in [current-state](../current-state.md), using CI run IDs/SHAs and artifact inventories.
 
-## Product intent
+## North star, motivation, and scope
 
-- Product depth: PRODUCT_STRATEGIC. Primary user: maker/developer on Apple Silicon.
-- Problem: create an editable, verifiable Blender scene from text, then revise it without rebuilding by hand.
-- Desired outcome: visible, repeatable and measured artifact per milestone; closed-provider baseline, then fully offline open-weight inference.
-- Risks: effectiveness vs direct Blender MCP; Mac compatibility; code/MCP replay; VLM quality; local memory and licences.
-- Assumptions to verify: 3DCodeVerse ports to Mac; MCP edits bridge reliably; feedback helps; local LLM completes basic tasks.
-- Success evidence: E2E artifact acceptance, edit preservation, cost/latency/quality reports, no-egress local run.
-- Post-release: when is agentic repair more valuable than direct tool calls?
-- Durable source: [product.md](../product.md).
+Produce **reopenable, editable, objectively verifiable 3D scenes** with the fewest necessary model turns and tool round-trips, initially with an opt-in cloud baseline and ultimately with a **complete no-egress local inference** path on compatible Apple Silicon. Preserve the general text-to-3D product while adding a separate architecture-oriented structured 2D-to-3D journey. Do **not** pivot the core into a full CAD application.
 
-## Decision and boundaries
+Potential partner scenario (discovery-only, not a confirmed contract): an architecture/design studio wants private 2D-to-3D conversion and targeted changes. A partner reports ~26 min per 100 m² plan (~3–4 min computing and ~22 min AI retouch). **These timings are unverified and do not prove an AI repair-loop cause.** Before proposing speedups, capture stage traces, actual run count, failures, retries, render waits, provider latency and concurrent work. The private partner's repo, documents, NDA terms, CAD files, prices, and customer data are **not** to be copied into this public repository.
 
-**Build a thin product-specific integration harness, not a wholesale merge or replacement of Blender.** Start with code-first, then add MCP editing and hybrid mode. Reuse 3DCodeVerse's tested ideas/modules selectively; run dcc-mcp-blender/dcc-mcp-core as pinned external adapters. Confirm API, version and license compatibility before importing or modifying upstream code.
+Research inspirations, not verified gains here:
+- [3DCodeVerse harness](https://github.com/gaoypeng/3dcodeverse/tree/main/harness): execute/measure/validate, cheap geometric gates before VLM, typed defects, scoped work, stages cached by input hash, cost and wall clock guards. Its [historical cost audit](https://github.com/gaoypeng/3dcodeverse/blob/main/harness/docs/COST.md) analysed 61 runs / 7,544 model calls and illustrates long-turn and refinement costs; hardware/model/dataset differ, so **do not transfer percentages**.
+- [dcc-mcp-blender](https://github.com/dcc-mcp/dcc-mcp-blender), [dcc-mcp-core](https://github.com/dcc-mcp/dcc-mcp-core): trial **whitelisted** typed operations against direct safe-builder edits; do not adopt all tools or permit unrestricted code execution.
+- [SWE-agent](https://github.com/SWE-agent/SWE-agent): narrow, actionable agent-computer interfaces.
+- Workflow/meta-tool and CAD papers are hypotheses to test, not authority to claim a latency benefit.
 
-Initial scope: static props and tiny scenes; Python + uv CLI; Blender as the only renderer/geometry backend; macOS Apple Silicon primary target; closed-model experimentation first; full local open-weight execution later. PNG + .blend + GLB where supported, with editable source and run manifest.
+## Accurate baseline and non-negotiable invariants
 
-Explicit non-goals for early slices: photorealistic cinematic scenes, large environments, CAD production tolerances, animation, 2D, neural mesh generation, fine-tuning, marketplace/assets, public web hosting, subscription/account infrastructure. Defer custom universal Geometry IR and React editor until evidence justifies them.
+As of this planning snapshot: **G0 real Blender/GCS PASS**, **one internal G1 real model→safe AST→Blender/.blend/PNG/GCS PASS**. The accepted G1 execution accepts only a bounded literal `bpy` subset (cube/cylinder/UV sphere and supported transforms) and uses an **audited builder**; it does *not* execute model-authored Python. The source `main` has a real six-task 3DCodeBench freeze/prompt-staging implementation (benchmark catalog PRs #27 and later main changes), but the **independent upstream-scored 3DCodeBench G1 baseline remains OPEN** until an actual comparable run passes. G2–G8, local no-egress, live editing and repair have no completed E2E evidence. Do not report a frozen suite or unit test as achieved benchmark quality.
 
-## Delivery principles / invariants
+1. **Security:** never directly `exec` AI-generated Python, expand untrusted AST acceptance merely for convenience, disable isolated processes, or expose filesystem/network/tool escapes. Typed operations must pass through bounded validated execution. Private data and secrets stay private.
+2. **Truthful acceptance:** no milestone DONE without a real applicable E2E on approved target, native reopen, PNG/contact sheet/gallery, hashes, independent assertions, negative path, correct FAIL/UNKNOWN and inspectable artifact bundle.
+3. **Geometry before appearance:** syntax/build/safe execution → deterministic invariants → cheap multi-view → optional separate visual judge. An attractive image never substitutes for valid geometry.
+4. **Revisions:** stable object identity, per-operation pre/postconditions, immutable accepted checkpoint, replay validation and rollback; no destructive partial commits.
+5. **Measurement:** stage spans and actual critical-path wall time, provider latency, tokens, cache usage, per-call ledger ID; no wall-clock double-count for overlapping spans and no missing usage represented as $0.
+6. **Reproducibility:** task/spec/strategy/model/pricing/Blender/source SHA/scorer/version pins; upstream benchmark answers never visible to generator.
+7. **Budget:** cheap unit/offline tests on routine PR; billed inference manual and approved; max cost, calls, retries, runtime, memory and concurrency. No implicit fallback from local to cloud.
+8. **Minimality:** grow modules only after a vertical task consumes a contract; no generic Geometry IR, full CAD stack, UI platform, training/LoRA, or orchestration mega-framework in this plan.
 
-1. Every slice provides a runnable command, PNG, .blend when relevant, manifest and tests; never infrastructure alone.
-2. Code truth = source; MCP truth = snapshot + typed journal; hybrid = source/snapshot + replayable patches.
-3. Stable IDs, immutable accepted artifacts, checkpoint/rollback and verified replay; detect divergence.
-4. Vendor logic never enters geometry/render/evals. Offline = no credentials, network, or cloud fallback.
-5. Deterministic geometry checks before subjective VLM; preserve failures and UNKNOWN.
-6. Sandbox generated code, bound memory/time/cost and clean owned processes on exit.
-7. Pin upstream + notices; check code, datasets, packages, models and assets separately.
-8. Keep heavy runs, weights and generated files out of Git.
+## Active roadmap — dependency milestones (supersedes the 2026-10-27 sprint order)
 
-## Architecture direction
+Milestones are **acceptance gates**, not a prohibition on parallel isolated implementation. The existing G0–G8 names retain meaning for compatibility; new PERF/VAL/REPAIR/TOOL/ARCH/INT tracks cut across them.
 
-See [proposed architecture](../architecture.md): model-independent agent; code-first (3DCodeVerse), typed MCP (dcc-mcp-blender/core), hybrid revision ledger, deterministic validation and optional visual judge. All are proposed, not yet tested. Pin upstream revisions only after smoke; track licences/notices.
-
-## Agile, benchmark-driven execution plan (2026-10-27)
-
-**Goal stays unchanged:** prompt -> editable/verifiable Blender scene -> inspectable render -> targeted refinement -> local/offline option. Blender remains geometry/render backend. CADCraft is **not** an implementation dependency; text->2D->3D is a *controlled ablation*, not the default route. Evidence from image-conditioned 3D, 2D layouts, orthographic reconstructions and 3DCodeVerse motivates experiments, not a blanket 2D-first architecture.
-
-### Product/sprint invariants
-
-1. **Vertical user journey every sprint:** runnable command -> real Blender scene (when geometry is in scope) -> reopen + geometry checks -> PNG/contact-sheet -> HTML gallery -> manifest/assertions/negative test. No solely-infrastructure sprint counts as shipped.
-2. **Benchmarks start at S1, not G5.** Use [benchmark protocol](../features/benchmark-protocol.md): 3DCodeBench 6 smoke / 24 stratified core / 212 release; paired task IDs/configs, independent evaluators and strict reference isolation. Add realistic BlenderWorld journeys *separately* once its own runtime is available.
-3. **Evidence-driven decisions:** one hypothesis at a time against a frozen baseline, report visual quality, valid-scenes, geometry, preservation, cost and latency separately. Record KEEP / REWORK / DROP with evidence, including unsuccessful hypotheses and UNKNOWN.
-4. **Agile promotion gate:** a sprint candidate is DONE only with real E2E **including negative path**, exact commit/run environment identity and inspectable immutable artifacts (or documented unavailable external prerequisites). Feature flags keep unfinished experiments out of the accepted path.
-5. **Cost controls:** cheap local checks and deterministic Blender in routine CI; billed models, GPU-heavy scorers, full 212 cases and local LLM/VLM runs are explicit opt-in with time/token/spend limits. Fail closed; never treat mocks as model/geometry evidence.
-6. **Source truth + portability:** preserve Blender Python source, scene/native checkpoints, hashes and revision lineage; no project-wide 2D/CAD intermediate schema until a measured experiment supports it.
-7. **Keep releases shippable:** each candidate must still complete the previous accepted user journey. "Green" unit tests alone do not justify integration.
-8. **Separate benchmark rules from product rules:** benchmark-specific reference geometries, prompts and scoring MUST NOT become hidden generator guidance. Compliance/licence of benchmark code, datasets, assets and model weights is verified independently.
-
-### Sprint roadmap: smallest increment with visible output
-
-| Sprint | Hypothesis or user improvement | E2E deliverable / pass gate | Dependencies | Primary tracking |
-| --- | --- | --- | --- | --- |
-| **S0 = G0** | Deterministic Blender reproducibility + artifact pipeline | True Mac mini Blender table; new-process .blend reopen; PNG, gallery, manifest, negative missing-Blender/timeout; **verified GCS bundle** | existing G0 candidate | [GH-00 #3](https://github.com/daniele21/3d-rendering-llm/issues/3) |
-| **S1 = G1 + benchmark MVP** | First AI-generated editable object is measurable | One real paid/approved AI prompt -> Blender script -> .blend/PNG -> 3DCodeBench smoke task metrics and error path; freeze first baseline | S0; task catalogue/provider | [AI-02 #7](https://github.com/daniele21/3d-rendering-llm/issues/7) |
-| **S2 = early G2/G5 evidence** | Broader fixed geometry/multiview benchmarks discover defects | Frozen 24 core subset report, 4-view render + deterministic geometry checks, error taxonomy, compare to S1 | S1 | [BH-02 #5](https://github.com/daniele21/3d-rendering-llm/issues/5), [EX-02 #9](https://github.com/daniele21/3d-rendering-llm/issues/9) |
-| **S3 = planner ablation** | Explicit geometry/parts/relations improve generation | Direct vs structured-planner paired 3D scenes, gallery, quality/cost/latency and KEEP/DROP decision | S1 + evaluation | [EX-01 #8](https://github.com/daniele21/3d-rendering-llm/issues/8) |
-| **S4 = G2 bounded repair** | Geometry and independent multiview judge can fix a known failure | Before/after views, valid checks, bounded retries, preservation of last accepted scene, score/cost delta | S2 | [EX-02 #9](https://github.com/daniele21/3d-rendering-llm/issues/9) |
-| **S5 = 2D-assisted ablation** | 2D concept, orthographic projections or scene layout improve relevant categories | Text-only vs auto-generated 2D references on same prompts, separate oracle-image control, valid .blend/renders and relative lift | S1 + evaluation; S4 optional | [EX-03 #10](https://github.com/daniele21/3d-rendering-llm/issues/10) |
-| **S6 = G3/G4** | Targeted edits and rollback preserve independent geometry | Real Blender edit via code vs typed MCP, reopened .blend, before/after/rollback and non-target invariants | S1, G0 | [EDIT-01 #11](https://github.com/daniele21/3d-rendering-llm/issues/11) |
-| **S7+ = G6/G7/G8** | Better render quality and local execution preserve result reliability | Preview vs Cycles same revision; open-weight text and later local vision+repair no-egress on Apple Silicon | S1, S4 where relevant | [RENDER-01 #13](https://github.com/daniele21/3d-rendering-llm/issues/13), [LOCAL-01 #12](https://github.com/daniele21/3d-rendering-llm/issues/12) |
-
-**Non-waterfall:** S0–S1 are acceptance gates, not a ban on parallel exploration. S3/S4/S5 strategy prototypes and S7 render/local adapters can start independently behind flags/isolated code paths; only claim sprint improvement after a measured end-to-end run using the stable suite. G5 becomes an *ongoing benchmarking capability* rather than an end-stage feature; G8 gallery exists from G0 and final Cycles polish comes later.
-
-### Tracked dependency DAG + safe parallel lanes
-
-**READY NOW (parallel, no shared writes; preparation != sprint completion):**
-
-| Lane | Issue | Explicit file ownership | Handoff / gate |
+| Stage | Goal and user-visible output | Dependencies/gate | State |
 | --- | --- | --- | --- |
-| A — target runtime/evidence | [GH-00 #3](https://github.com/daniele21/3d-rendering-llm/issues/3) | `src/geometry_harness/blender/`, G0 E2E, CI script | G0 real Blender + GCS verification |
-| B — reference benchmark/provenance | [BH-01 #4](https://github.com/daniele21/3d-rendering-llm/issues/4) | `benchmarks/catalog/`, `benchmarks/fixtures/`, benchmark tests | immutable task IDs, license/version manifest, 6/24/212 suites |
-| C — quality/evaluation contracts | [BH-02 #5](https://github.com/daniele21/3d-rendering-llm/issues/5) | `src/geometry_harness/evaluation/`, `benchmarks/reporting/` | EvaluationRecord schema, comparators, negative tests |
-| D — provider/code-generation contract | [AI-01 #6](https://github.com/daniele21/3d-rendering-llm/issues/6) | `src/geometry_harness/providers/`, `agents/`, `config/profiles/` | model adapter and safe code runner contract, **no cloud billing in automatic CI** |
+| **S0/G0** | Real deterministic Blender + reopened .blend/PNG/gallery/manifest/GCS | Exact Mac mini CI, negative cases | **PASS technical** |
+| **S1/G1** | Real cloud LLM → safe Blender scene, six real smoke tasks with valid upstream-comparable scorer and frozen artifacts; time/cost tracing on the same runs | S0; benchmark rights/version and approved inference | **PARTIAL**: internal smoke PASS, official benchmark OPEN |
+| **S1T/PERF-01** | Hierarchical span trace/critical path + per-stage latency, linked to existing immutable cost ledger; visual run timeline | Real G0/G1 fixtures; no new paid call for routine checks | **PLANNED P0** |
+| **S2/VAL-01** | Deterministic PASS/FAIL/UNKNOWN geometry findings with affected object IDs, multi-view preview and one controlled injected defect | Frozen scene identity + real Blender | **PLANNED P0** |
+| **S3/EX-01** | Direct vs bounded typed planner: paired scenes, geometric acceptance and end-to-end time/cost | S1 quality suite + stable TaskSpec/metrics | **PLANNED P1** |
+| **S4/REPAIR-01** | Scoped typed patch vs full-regeneration baseline, immutable checkpoints, new-process replay/rollback, no unintended delta | S2 validator + revision contract; measured trials | **PLANNED P0** |
+| **S4P/ORCH-01** | Adaptive bounded repair policy including cheap-first, repeat-signature handling and skip/stop decisions; A/B | PERF-01 + REPAIR-01 + paired baseline | **PLANNED P1** |
+| **S5/EX-03** | **Generated** 2D reference ablation vs text→3D (preserve separate oracle controls) | S1 scoring; keep existing #10 experimental | **PLANNED P1** |
+| **S5A/ARCH-01** | **Imported** structured DXF→editable Blender scene with objective floorplan checks; CAD suite separate from 3DCodeBench | Safe deterministic builder + architecture fixtures | **PLANNED P1, parallel prototype** |
+| **S6/G3–G4/EDIT-01** | Scene edits via audited typed operations vs optional pinned Blender MCP adapter, re-open, preserve unrelated objects, replay/rollback | REPAIR-01 contracts | **PLANNED P1** |
+| **S6T/TOOL-01** | Evidence-selected composite tools, stage caching and safe disjoint parallel tasks; measured A/B | PERF traces + typed calls; no scene-wide parallel writes | **PLANNED P1** |
+| **S7/G6–G7/LOCAL-01** | Same task using open-weight local model, bounded memory and **verified no-egress**; optional local VLM only when measured | Valid cloud baseline; safe provider contract; offline tester | **PLANNED P1** |
+| **S7R/G8** | Cycles final vs preview from same saved accepted scene, separate final-render budget | Valid geometry/edit checkpoint | **PLANNED P2** |
+| **S8/INT-01** | Partner-independent integration contract then private opt-in connector PoC, with actual partner baseline and agreed terms | NDA + code audit + customer consent + accepted core slices | **DISCOVERY/BLOCKED externally** |
 
-**CONVERGE:** [AI-02 #7](https://github.com/daniele21/3d-rendering-llm/issues/7) alone owns CLI wiring and the G1 showcase. Depends on verified A, B-smoke, D, and C-minimum evaluation schema. No parallel conflicting CLI edits.
+**Execution order for value:** baseline + tracing → cheap validator → typed revision/scoped repair → adaptive repair/meta-tools if measured → local vs cloud and structured-CAD vertical → partner integration after discovery. A local provider probe and synthetic DXF fixture may begin in parallel, but no claims of comparative improvement until the appropriate baseline exists.
 
-**READY FOR DESIGN, NOT ACCEPTED E2E:** [EX-01 #8](https://github.com/daniele21/3d-rendering-llm/issues/8) planner, [EX-02 #9](https://github.com/daniele21/3d-rendering-llm/issues/9) validation/repair, [EX-03 #10](https://github.com/daniele21/3d-rendering-llm/issues/10) 2D references, [EDIT-01 #11](https://github.com/daniele21/3d-rendering-llm/issues/11) editing/rollback, [LOCAL-01 #12](https://github.com/daniele21/3d-rendering-llm/issues/12) local, [RENDER-01 #13](https://github.com/daniele21/3d-rendering-llm/issues/13) final. Each uses non-overlapping owned folders, can prototype behind strategy/adapters, and must rebase/verify exact integration SHA before merge.
+## Work packages: tasks, deliverables, negative paths, ownership
 
-**Integration contract for coding agents:** write one concrete interface note before fan-out (TaskSpec, EvaluationRecord, SourceArtifact/RunManifest, bounded ExecutionBudget). Each lane uses an isolated branch/worktree from the same reviewed base; never modify other lanes' directories without coordination. Merge one user-visible vertical slice at a time; run cheap tests on every change, actual Blender on target for integration, and cost-bounded model tests only when explicitly authorized. If a runner is inaccessible or model credentials are absent, report BLOCKED and preserve diagnostics rather than substitute fake evidence.
+### PERF-01 · Agent tracing and bottleneck attribution (P0; new issue to track)
+Owner: `src/geometry_harness/telemetry/`, `tests/telemetry/`, report adapter only in `evaluation/`. Extend, do not replace, `costs/` append-only ledger.
+- Build `ExecutionTrace` with run/span/parent IDs, stage, attempt, status, monotonic duration, model/tool/runtime ID, token/cost ledger references, inputs/outputs hashes and recorded failure class. No secrets, unredacted prompts, home paths, private CAD geometry.
+- Instrument actual cloud adapter, safe AST translation, audited builder, separate Blender inspector/reopen, renderer, scorer, tool and repair boundaries. Record both exclusive/inclusive timing and critical path from start/end timestamps (not sum of parallel span durations).
+- Export scrubbed local JSON/JSONL and deterministic `performance-summary.json`; optional OpenTelemetry/OpenInference/Phoenix exporter **off by default**, no network dependencies.
+- Acceptance: G0+G1 local/target runs emit complete spans and linked immutable cost summary; incomplete/failure paths preserve diagnostic evidence and UNKNOWN; no timing double-count; negative cases timeout/provider missing/process crash; verify private CI storage and review report.
 
-### Stage-gate decision and benchmark policy
+### VAL-01 · Cheap-first deterministic geometric findings (P0; extends #9 and #5)
+Owner: `src/geometry_harness/validation/`, validation tests; leave Blender builder ownership with current owner.
+- Introduce typed `GeometryIssue` (`code, severity, affected_ids, expected, actual, units, tolerance, evidence, repairability, status`) and `ValidationReport`; schema-version them and embed hashes in manifest.
+- Validate executable/native scene and object IDs first, then dimension/placement/contact/connectivity/non-target invariants **only where task constraints require them**; do not require manifold/closed mesh universally. Add 4-view cheap previews and only conditional independent VLM judge for irreducible perceptual quality.
+- One negative fixture with disconnected object, one dimensional tolerance failure, one missing evidence case (UNKNOWN); no mocked VLM credited as visual success.
+- Acceptance: reliable PASS/FAIL/UNKNOWN, numeric object-specific findings and real Blender E2E + gallery with failure cases. Validation cannot mutate scene.
 
-- **S0:** exact trusted source SHA on dedicated Mac mini, Blender build and reopen, GCS upload object paths/sha256 confirmed; GCS bootstrap may already exist, verify before changing infra.
-- **S1:** first *real* model call, a 3DCodeBench task, actual script/native scene/renders and negative provider/script handling; capture stable task IDs and model config. Prior to this, no claim of AI-quality improvement.
-- **Every A/B sprint:** paired immutable prompts and task IDs; same generator, budgets, environment and scoring unless the tested variable is intentionally changed; report repetitions/uncertainty and both pass rate and cost per accepted result. No cherry-picked showcase results.
-- **2D ablation:** never use benchmark reference image/factory as generative input in the text-only comparison. Treat externally supplied reference views as a *different supervised condition*. Count all reference-generation costs and note hidden geometry ambiguity.
-- **Local/offline:** fail closed if any remote provider active; model not found or VLM missing => explicit FAIL/UNKNOWN with no fallback.
-- **Release:** full frozen suite 212 only when supported by data/runtime/licensing and approved compute budget, plus optional BlenderWorld tasks in its separately pinned environment. Do not assert official leaderboard comparability unless the upstream full scorer, runtime and evaluation settings match.
+### REPAIR-01 · Typed scoped patches, checkpoints and guarded execution (P0; extends #9/#11)
+Owner: `src/geometry_harness/revisions/` and `repair/` with shared one-time `TypedSceneOperation` contract. Single integrator owns scene state interface.
+- Stable persistent IDs and scene revision SHA; typed allowlisted `translate/resize/rotate/material` initial ops, with bounds, units, target checks and idempotency token. Later domain-specific door/wall operations only with explicit constraints.
+- One trusted builder applies the patch within isolated staging scene; verify preconditions + postconditions + non-target invariants; atomic accept moves reference to new checkpoint. Crash/error keeps last accepted revision. Compare fresh-process replay; preserve original/edited/reverted .blend and before/after/rollback images.
+- A/B `whole_scene_regenerate` vs `scoped_patch` on same controlled injected defect. Count all AI turns, tool calls, wall clock, failed attempts and error preservation.
+- Acceptance: identical task and quality requirements, no unauthorized modification, reproducible rollback and negative tests for stale revision, target missing, corrupted journal, tool timeout.
 
-### Durable tracking / review cadence
+### ORCH-01 · Adaptive decision/repair policy (P1; extends #9)
+Owner: `src/geometry_harness/repair/policy.py` (one owner with REPAIR).
+- Policy route: already satisfied→accept; deterministic fix with proof and permission→tool; ambiguous localized→LLM scoped patch; visual ambiguity→optional independent judge; repeated signature/stagnation/budget exhausted→stop/alternative/human review.
+- Pin default **experimental** limits (e.g. 2 AI rounds, 12 tool calls, 240 active seconds), not empirically optimized promises. Preserve mandatory geometry constraints even if visual score plateaus.
+- A/B fixed rounds vs policy with same baseline, execution budget and quality gates; separate improvement from safety/reliability outcomes; reject policy if it only hides difficult failures.
+- Acceptance: full run trace shows decision reasons and remaining budget; negative cases prove no extra remote calls after stop and preservation of accepted artifact.
 
-- **Canonical delivery state:** this workstream; **execution checklists and work boundaries:** linked GitHub issues #3–#13; **evaluation protocol and suite identity:** [benchmark-protocol.md](../features/benchmark-protocol.md); **artifact gate:** [showcase-evidence.md](../features/showcase-evidence.md).
-- Per issue attach branch/PR, exact source SHA, commands, target runner, failure evidence, gallery/GCS links and quality metrics. No GitHub issue is marked complete just because code exists.
-- At each sprint demo: open current and previous galleries side-by-side, read objective PASS/FAIL/UNKNOWN and costs, document findings and next narrow hypothesis. On rejected experiments document why and keep the baseline.
-- This roadmap is a living plan; implementations and complete acceptance gates must be grounded in exact runs. G0 and first narrow G1 are real, but benchmark and downstream experiments remain open.
+### TOOL-01 · Composite tools, stage cache and restricted parallelism (P1; new issue)
+Owner: `src/geometry_harness/execution/`, optional `integrations/dcc/` after licence/version audit.
+- Extract top recurring tool-call patterns from **actual** traces, then implement at most 2–3 composites initially: `inspect_geometry`, `render_validation_views`, `apply_verified_patch`. Every composite internally preserves per-step validations, errors, trace attribution and authorizations.
+- Cache deterministic outputs by input hash + scene revision + Blender/tool/config versions; invalidation must handle geometry/material/camera changes; never assume stochastic model responses are safe reusable cache objects.
+- Parallelize independent validation or disjoint immutable jobs only; mutation of the same scene is serialized/locked. No nested unbounded fan-out.
+- A/B old primitive sequence vs composite under same conditions; fallback retained on measured regression.
+- Acceptance: latency and tool-turn delta with no geometric/non-target regressions, negative cache invalidation, concurrent version conflict, missing tool/MCP, timeout.
 
-## Vertical milestone contract
+### LOCAL-01 · Local model as interchangeable executor (P1; extends #12)
+Owner: `src/geometry_harness/providers/local/`, offline test profiles. Can prototype after ProviderAdapter contract, before later milestone acceptance.
+- Feature/capability negotiation for structured output, vision, tool use, context, tokens, memory, retries. Local models return the same safe typed AST-plan or operations; no arbitrary model code execution.
+- Test basic same fixed fixture cloud vs local with no-egress evidence, peak RSS/latency, quality and total cost modelled separately. Never automatically fall back to cloud. Serial model load/unload if hardware memory requires.
+- Full local create→inspect→repair and optional local VLM is a separate gate after REPAIR-01.
+- Acceptance: real local model+Blender native reopen, offline network-denial, untrusted endpoint fail-closed and clear UNKNOWN for unavailable local visual judgement.
 
-**Showcase gate for G0–G8:** implement the real per-stage `tests/e2e/test_showcase_gX.py` specified in [showcase evidence contract](../features/showcase-evidence.md). Every test must **generate and publish** inspectable PNG/contact sheet + offline gallery + manifest + native files, assert meaningful behavior and test a failure path. Missing or mocked deliverables do not complete a milestone. Commands below are **proposed, not implemented**. Reuse a stable four-leg table fixture initially.
+### ARCH-01 / ARCH-02 · Architecture vertical (P1; new issues)
+Owner: `src/geometry_harness/domains/architecture/`, `benchmarks/architecture/`; generic core untouched.
+- Initially **DXF only**, synthetic fixtures with disclosed units, layer mapping, walls/openings and tolerances; deterministic parsing and geometry first. Record missing layer conventions, open boundaries and ambiguity as FAIL/UNKNOWN rather than hallucinated geometry. Use bounded domain schema, not global Geometry IR.
+- 10 synthetic fixtures (simple room, walls, door/window, multiple layers, bad units, missing opening, unclosed boundary, changes/rollback). Separate real customer test assets privately after authorization, **never public repo**.
+- Gate: synthetic DXF → safe builder → reopened editable .blend/preview → objective measured wall/door positions and negatives, no LLM needed for known geometry. AI only for ambiguous intent/styling/changes that cannot be resolved safely.
+- EX-03 #10 stays **a distinct generated-reference ablation**, not replaced with DXF input; no dataset reference leakage.
 
-| Slice | Immediately tangible result | Planned user demo | Gate / definition of done | Depends | State |
-| --- | --- | --- | --- | --- | --- |
-| G0 — Boot + render | .blend + PNG of deterministic 4-leg table, no AI | geometry showcase --milestone G0 | Fresh setup and doctor; open/re-check 5 objects, dimensions, manifest, timeout cleanup | — | TECHNICAL E2E PASS; visual review pending |
-| G1 — AI creation | Text request -> first AI-rendered object | python -m geometry_harness.g1 --output RUN (approved opt-in) | Real Sol→safe literal geometry→Blender & immutable cost evidence verified; still missing 3DCodeBench smoke evaluation | G0 | INTERNAL E2E PASS, BENCHMARK OPEN |
-| G2 — Repair loop | Four views and before/after report | geometry run --feedback geometric-visual | Geometry gates + optional independent judge + bounded retry and round evidence | G1 | BLOCKED |
-| G3 — Typed MCP edit | Recolor only tabletop, see before/after | geometry edit RUN --prompt "Blue tabletop" | Real dcc-mcp Blender edit, save/reopen and unchanged other transforms | G1 (parallel with G2) | BLOCKED |
-| G4 — Hybrid + rollback | Versions and lossless restoration | geometry rollback RUN REV | Stable IDs, action journal, replay/new-process verification and rollback | G2,G3 | BLOCKED |
-| G5 — Comprehensive comparisons (ongoing since S1) | Per-model/strategy gallery and report | geometry benchmark --suite fixtures/core | Fixed prompts/budgets, valid-scene metrics, time/cost and manual spot checks | G4 | BLOCKED |
-| G6 — Local code generation | Same table generated by local open-weight model | geometry run --profile local --mode code | No API keys; output validated; peak memory/latency compared with G5 | G1 (parallel with G3–G5) | BLOCKED |
-| G7 — Full local loop | Local LLM/VLM creates, judges and repairs offline | geometry run --profile local --offline | Controlled no-egress E2E, cached models and fail-closed optional visual judge | G2,G4,G6 | BLOCKED |
-| G8 — Final render workflow (gallery begins at G0) | Cycles render and revisable gallery | geometry render RUN --quality final; geometry gallery RUN | Output reopened; preview/final comparison; functional visual review | G4,G5 | BLOCKED |
+### INT-01 · Partner integration discovery / PoC (P1, externally gated; new issue)
+Owner: future adapter behind documented local-only protocol, NOT partner code in source.
+- After mutual NDA: observe real input/output formats, layers, iteration/repair loops, duration by stage, hardware, privacy/legal requirements, API terms and deployment, data flows, actual customer scope/budget. Validate whether there is a real editable model or image-only target.
+- Define `submit_task/status/get_artifacts/apply_patch` conceptual interface; no network endpoint implementation until integration needs confirmed.
+- Establish ownership of background IP (general harness) and foreground/client-specific connectors contractually. Partner repo, raw CAD, NDA-covered information, production credentials **private**.
+- A/B partner pipeline vs bounded replacement on same authorized test cases, identical hardware/input/quality criteria and human sign-off; do not promise the reported 26→X minute reduction.
+- Gate: verified telemetry + one replaceable step identified, successful sandbox PoC and independently accepted output; otherwise REWORK/DROP.
 
-### Implementation tasks, ownership and parallel work
+## Scientific benchmark and experiment protocol (PERF-02)
 
-| ID | Owns/writes | Scope / integration boundary | Depends | Parallel |
-| --- | --- | --- | --- | --- |
-| G0a | root app scaffold, AGENTS.md, README.md, .engineering/, scripts/, docs/product.md | **Adopt** copied repo-template-sw as this app; remove template-project identity and unused shipped template content; preserve only fit engineering contracts; pin Python/uv and command/CI semantics | — | with G0b after interface agreement |
-| G0b | src/.../blender/, fixtures/, tests/smoke/ | Blender doctor, minimal Python build, bounded headless render, dimensions/open/export smoke; no AI | — | yes, separate files |
-| G1a | src/.../providers/, config/profiles/ | Provider abstraction, API key safety, capabilities, cloud CLI/API adapter; explicit opt-in remote usage | G0 | with G1b |
-| G1b | src/.../agents/, src/.../runs/, tests/e2e/ | Adapt minimal 3DCodeVerse code-first build; capture script, output, timings/usage/errors; cheap run fixture | G0 | yes, converge into G1 |
-| G2a | src/.../validation/, src/.../render/ | Reuse geometric gates, fixed multiview cameras, reports and render comparison | G1 | with G2b |
-| G2b | src/.../judges/, src/.../repair/ | Judge/repair loop with bounded iterations, independent spec and no generator reasoning leak | G1 | yes, converge into G2 |
-| G3a | src/.../integrations/dcc/, config/tools/ | MCP session bridge, discovery/search-describe-call, typed tool whitelists, Blender version compatibility | G1 | with G2 |
-| G4a | src/.../revisions/, tests/replay/ | Journaling, stable IDs, snapshots, replay consistency, rollback, crash recovery | G2,G3 | no, owns state contract |
-| G5a | benchmarks/, src/.../evaluation/, tests/fixtures/ | Task registry, provider x mode matrix, reports, quality/cost/latency statistics, artifact lineage | G4 | with G6 |
-| G6a | src/.../providers/local/, config/profiles/local.* | Korgis/llama.cpp/MLX compatible runtime contract; text generation fallback if tool calling weak | G1 | yes |
-| G7a | src/.../judges/local/, tests/offline/ | Open-weight VLM, offline/no-egress checks, memory/residency control | G2,G6 | with G5/G8 |
-| G8a | frontend/ or minimal static viewer, src/.../render/final/ | Gallery first; add React/Three.js only if static viewer insufficient, later material editor | G4 | with G7 |
+See the [benchmark protocol](../features/benchmark-protocol.md) and [full performance experiment contract](../features/harness-efficiency-experiments.md).
+- Keep official 3DCodeBench public 6/24/212 cohort and upstream scorer isolated from generator, pinning exact revision/right/version. Internal AST-limited scene smoke is **not** an official score. Separate architecture/real-CAD suite and no mixing metrics.
+- Experimental arms (same task/model/profile and fixed budgets except explicit intervention): A0 direct; A1 + deterministic gates; A2 + scoped repair; A3 + adaptive policy; A4 + measured composite tools; A5 chosen configuration with local model (model changes, so not a same-model causal A/B).
+- Primary: paired P50/P90 **end-to-end accepted outcome** wall time and acceptance rate; support: model turns, tool calls, retries, trace critical path, geometric pass, non-target edit preservation, cost per accepted and peak RAM. Report failures/UNKNOWN, denominator and censored timeouts.
+- Provisional practical targets to **pre-register**, not promises: >=20% P50 time reduction, >=30% model-turn reduction, no increase in blocking geometry failures, 100% evidence for claimed PASS. A six-item smoke is descriptive only; core 24+ paired replications/uncertainty are required for generalization.
+- Stop/go: KEEP only if quality non-inferior at preregistered tolerance and improved latency/cost under approved budget; REWORK if mixed; DROP if consistently worse; INCONCLUSIVE if missing judge/runtime or insufficient sample. Never quietly swap task IDs or delete failures.
 
-**Integration policy:** non-overlapping subtasks may use separate working trees but join one feature branch for each visible slice. Integrate coherent outcomes into the shared branch after required automated gates; do not publish a waterfall of technical-only PRs. Define contracts before parallel edits.
+## Delivery sequence, isolation, and PR gates
 
-## Executable current slice — G0
+**Wave 0 — planning (this revision):** documents/schemas/ownership/gates only; no inference calls, no runtime or CI label changes.
+**Wave 1 (parallel, independent paths):** W1-PERF tracing/report; W1-BH external dataset/scorer baseline #4/#5/#7; W1-VAL typed issues & real geometric negative fixture. LOCAL adapter contract and DXF synthetic fixture research can be built on separate branches, but no accepted A/B yet.
+**Wave 2 (converge):** stable scene object identity & checkpoint contract, guarded typed patch and real rollback E2E. One owner of scene revision to prevent parallel conflicting work.
+**Wave 3 (parallel experiments):** bounded repair vs full regeneration, planner A/B, generated 2D ablation; compare only on frozen same-task run configuration.
+**Wave 4:** optional adaptive policy and composites selected by traces; experimental no-egress local model/vision; deterministic DXF build and architecture suite.
+**Wave 5:** partner code audit and private adapter after NDA; 4K Cycles only after accepted geometry and preview.
 
-1. Inspect repo-template-sw content; perform project adoption instead of pretending current template is already application code. Update root README/AGENTS and specialize the engineering command/E2E configs; remove or relocate unrelated template-distribution machinery deliberately.
-2. Build only a deterministic tabletop + four-leg Blender fixture; use explicit metric units, object naming, camera/light, fixed preview settings and an isolated output directory.
-3. Provide native install/doctor/demo/check/test commands with no cloud or model dependency. One command must produce preview.png, scene.blend and manifest.json.
-4. Test open/re-save, count/names, bounds/contacts, missing Blender error, timeout and cleanup; run on local Apple Silicon or repository-owned automated macOS runner when available.
-5. Implement the real G0 showcase E2E: output `index.html`, contact sheet, assertions, `.blend`, preview and manifest under `ci-artifacts/showcase/`; reopen/check/hash, persist to private GCS from the Mac mini workflow, and review the downloaded bundle.
+Suggested atomic PR sequence with exit gates:
+1. `docs(plan)` this roadmap + feature specs, AGENTS + state; documentation-only.
+2. `feat(perf)` spans, reports, cost-ledger linkage + G0/G1 E2E.
+3. `feat(benchmark)` verified independent real smoke baseline and negative path.
+4. `feat(validation)` typed geometry findings + 4-view real Blender evidence.
+5. `feat(revisions)` stable IDs/checkpoints and typed patch executor.
+6. `feat(repair)` one localized injected defect+rollback and A/B.
+7. `feat(orchestration)` adaptive policy + decision report paired A/B.
+8. `feat(tools)` evidence-chosen composites and cache A/B.
+9. `feat(architecture)` DXF synthetic fixtures → native Blender validated.
+10. `feat(local)` no-egress local basic E2E and measured comparison.
+11. `feat(integration)` privately scoped partner adapter after authorizations.
 
-**CI routing:** `.github/ci/local-test.sh` runs via central `geometry-mac-mini.yml` on a `local-mac-mini-*` runner at pinned source SHA. The G0 code exists; real Blender is still missing in verified runner preflight. G0 requires PNG, reopened .blend and a passing private GCS upload gate; source `local-ci/mac-mini` status is secondary. GCS setup is documented in central `docs/geometry-gcs-artifacts.md`. Paid models remain manual. Details: [evidence contract](../features/showcase-evidence.md).
+**Parallel branch rules:** new branches from current `main`, explicit owner paths, no shared writes or accidental auto-merge, independently run fast contracts, verify exact trusted SHA on target Mac mini/GCS at integration; **costed calls opt-in and budget-approved**. A docs-only PR is not a run-quality proof. All production claims need actual negative-case E2E evidence.
 
-## Cross-cutting validation
+**CI routing:** source `.github/workflows` only hosts cheap unit/template checks. Real Blender/GCS and approved billed requests run through centrally owned `daniele21/local-runner-infra` with verified `local-mac-mini-*` identity, pinned source SHA, WIF private bucket and exact artifact/hash inventory. No local runner labels provisioned from this public repo. Private/offline runs are not automatically uploaded: use separately authorized exports.
 
-- Fixed developmental suite: cube, table, chair, material edit, geometry edit, malformed script, disconnected leg; add a frozen non-leaking 3DCodeBench 6/24/212 benchmark suite after licensing/version validation. See benchmark-protocol.md.
-- Compare code/typed/hybrid with equal prompts, budgets and tool versions; report acceptance, geometry, preservation, latency, cost/valid result and visual rubric separately.
-- Cheap checks during iteration; affected Blender E2E at integration; hardware/offline/UI-media evidence at release. Calibrate quality thresholds from the baseline, not guesses.
+## Issue mapping / backlog (no issue is implicitly closed)
 
-## Resume checkpoint
+Existing: [#3 G0](https://github.com/daniele21/3d-rendering-llm/issues/3), [#4 catalog](https://github.com/daniele21/3d-rendering-llm/issues/4), [#5 evaluation](https://github.com/daniele21/3d-rendering-llm/issues/5), [#6 providers](https://github.com/daniele21/3d-rendering-llm/issues/6), [#7 G1](https://github.com/daniele21/3d-rendering-llm/issues/7), [#8 planner](https://github.com/daniele21/3d-rendering-llm/issues/8), [#9 validation/repair](https://github.com/daniele21/3d-rendering-llm/issues/9), [#10 generated-2D](https://github.com/daniele21/3d-rendering-llm/issues/10), [#11 edits](https://github.com/daniele21/3d-rendering-llm/issues/11), [#12 local](https://github.com/daniele21/3d-rendering-llm/issues/12), [#13 Cycles](https://github.com/daniele21/3d-rendering-llm/issues/13), [#23 FinOps](https://github.com/daniele21/3d-rendering-llm/issues/23).
 
-- Source: main 5710a83aa573e91b1c6285eda0bace43e43720d8, planning branch plan/incremental-geometry-harness.
-- Confirmed: repository currently contains repo-template-sw distribution and copied adopter templates, not a specialized Geometry Harness app; only main branch existed at planning time.
-- Confirmed upstream: 3DCodeVerse includes code-first agentic pipeline; dcc-mcp-blender and dcc-mcp-core expose typed Blender MCP tooling; integration, macOS compatibility and performance **not yet tested in this repository**.
-- Unresolved: exact upstream SHAs/version matrix; first closed vendor/model; chosen local model/VLM; precise resource and quality budgets. None blocks G0.
-- Next: provision GCS/WIF, install Blender on Mac mini, rerun G0 and inspect the bucket's .blend/PNG plus SHA-256 manifest before marking DONE.
+New tracking requested from the plan, create explicitly before implementation: `PERF-01` tracing; `PERF-02` efficiency A/B; `TOOL-01` composites/cache; `ARCH-01` imported DXF→3D; `ARCH-02` architecture fixtures/metrics; `INT-01` public interface and private discovery boundary. Existing #9 owns deterministic validation/repair policy, #11 owns typed scene operation/revision implementation, #12 owns local execution. Avoid duplicate owners.
 
-## Durable destinations and lifecycle
+## Decisions / risks / validation before productization
 
-At each integration: docs/product.md for settled mission/outcomes, docs/architecture.md for module ownership/integration decisions, docs/features/ for shipped behavior, docs/current-state.md for integrated/blocked/next. Architecture decisions on code-first/MCP state or licensing go in ADR only when settled. Keep this workstream as the sole active execution plan, update states/checkpoint on meaningful handoffs; archive/delete it after roadmap completion once durable knowledge is transferred. Git history records completed work.
+- Risks: longer multi-round contexts, VLM noise, MCP chatty operations, unsafe AST expansion, invalid cache keys, limited local RAM, non-comparable 3DCodeBench environments, partner claims without evidence, customer IP leakage.
+- Prefer simple direct builder over agent planning if A/B does not support improvement; prefer deterministic patch to LLM; prefer compositor only when trace shows actual repeated pattern; prefer no tool expansion over unsafe tools.
+- **IP / distribution**: inspect licences of upstream source, models, textures, data and DCC plugins independently; Blender GPL and deployment implications need specific counsel. No assumed rights to partner materials. Background/foreground IP terms require signed agreement, not code comments.
+- Open questions for partner: exact data formats (DXF/DWG/PDF/IFC), whether scene is native editable, requested 4K target, stage breakdown, calls per loop, revision semantics, target machines, no-egress vs on-prem cloud, commercial budget and success criteria.
+- No estimation of speedup is accepted without repeatable partner measurements.
+
+## End-of-sprint acceptance checklist
+
+- [ ] Correct source SHA/branch/runtime, deterministic task IDs, scorer/prompt/settings pins and licence inventory.
+- [ ] Real input→output native scene opened in independent Blender process; objective and negative geometry checks; visual gallery inspected.
+- [ ] Error/timeout/cancel and UNKNOWN preserved; no silent fallback; previous accepted scene survives.
+- [ ] Cost ledger complete or explicitly UNKNOWN; trace critical path reconciled; environment and memory captured.
+- [ ] A/B paired denominator, identical constraints except intervention, quality/latency/cost decision KEEP/REWORK/DROP/INCONCLUSIVE.
+- [ ] Private-only data/artifacts stored in approved environment; no secrets/models/images in Git.
+- [ ] Documentation evidence state updated in [current-state](../current-state.md) after passing runs; never confuse this planning text with done work.

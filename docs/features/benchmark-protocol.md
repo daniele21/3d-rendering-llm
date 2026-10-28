@@ -1,6 +1,6 @@
 # Benchmark protocol — 3D Rendering LLM
 
-Status: **protocol planned 2026-10-27; no benchmark results exist yet in this repository.**
+Status: **benchmark protocol**; main now includes six real task IDs/freezing utilities, but independently verified official-scored G1 quality results remain OPEN. This document is not benchmark performance evidence.
 Owner: BH-01 benchmark data, BH-02 evaluation/reporting. Execution plan and issues: [Geometry Harness workstream](../workstreams/geometry-harness.md). Required scene/gallery evidence: [showcase contract](showcase-evidence.md).
 
 ## Scope and external references
@@ -83,3 +83,9 @@ For every experimental model call (including generator, planner, visual judge, r
 - **Release:** full suite where licensed/runnable, compare to frozen accepted baseline, inspect galleries and at least a few native files; document remaining hardware/scorer limitations.
 
 **Initial work items:** [BH-01](https://github.com/daniele21/3d-rendering-llm/issues/4), [BH-02](https://github.com/daniele21/3d-rendering-llm/issues/5), [AI-02](https://github.com/daniele21/3d-rendering-llm/issues/7), [2D ablation](https://github.com/daniele21/3d-rendering-llm/issues/10).
+
+## New measured-harness and CAD strata (2026-10-28)
+
+Follow [efficiency experiment protocol](harness-efficiency-experiments.md) for A0 direct, A1 deterministic gates, A2 scoped patch, A3 adaptive stop, A4 composite tools and A5 a separately attributed local-model comparison. Evaluate paired task IDs and keep critical path, model turns, provider wait, tool calls, stage cache status and failures/UNKNOWN. Pre-register practical non-inferiority and latency thresholds, do not infer speedups from source code or six-task smoke.
+
+The architecture track [ARCH-01/02](architecture-2d-to-3d.md) uses **imported, externally supplied structured DXF** and its own ten synthetic fixtures. It is **not** the generated 2D-reference ablation of #10 and must never be mixed into an official text-to-3D 3DCodeBench score. Real customer designs remain in private sanctioned storage after NDA. Actual cost accounting must link every provider span to immutable private ledger (including retries and VLM) and distinguish token estimate from billed invoice.

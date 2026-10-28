@@ -2,6 +2,12 @@
 
 This is the **3d-rendering-llm application**, not the generic `repo-template-sw` distributor. Goal: reproducible editable 3D geometry and visible milestones, ultimately with fully local open-weight LLM/VLM inference. No cloud account or network access may be necessary for deterministic G0 and later offline modes.
 
+## Active plan and ownership (2026-10-28)
+
+The sole current delivery roadmap is [docs/workstreams/geometry-harness.md](docs/workstreams/geometry-harness.md). It supersedes the older sprint sequencing. G0 and a **narrow** G1 safe-AST native-scene E2E have real evidence; external benchmark scoring, new agent tracing, deterministic multi-scene validator, scoped repair, typed edits, local no-egress and architecture DXF are **not yet accepted**. See [docs/current-state.md](docs/current-state.md) before claiming a milestone. New plans/contracts: [agent-performance](docs/features/agent-performance.md), [repair-policy](docs/features/repair-policy.md), [harness-efficiency-experiments](docs/features/harness-efficiency-experiments.md), [architecture 2D→3D](docs/features/architecture-2d-to-3d.md), [external integration](docs/features/external-integration-contract.md).
+
+New code ownership (planned modules; don't create empty scaffolding): `telemetry/` owns spans but not cost pricing; `validation/` owns read-only geometry issues; `revisions/` + `repair/` share one revision/operation contract and one integrator; `execution/` owns composites/cache/locks; `domains/architecture/` owns DXF/domain schema only; `providers/local/` owns on-device adapter. No two parallel lanes write `cli.py`, `blender/` or revision code concurrently. Freeze contracts first. Private partner code/data cannot enter public Git/issues/GCS by accident.
+
 ## Current executable scope
 
 - Root README: user commands. `docs/product.md`: durable product direction.
@@ -18,7 +24,7 @@ This is the **3d-rendering-llm application**, not the generic `repo-template-sw`
 1. Each milestone ends with a real inspectable scene/render, machine assertions and a negative test. Mock/replay is not a real Blender/model result.
 2. Never claim Gx DONE until the real representative E2E and required assets exist; include commit/run/environment identity, limits and gaps.
 3. Code-first truth is generator code; eventual MCP truth requires checkpoint + typed action journal; preserve previous accepted revisions and detect divergence.
-4. Keep provider logic separate from geometry and rendering. Closed API experiments are opt-in, credential bounded and measurable. No API required for G0.
+4. Keep provider logic separate from geometry and rendering. **Never execute arbitrary model-authored Python**; current safe AST compiler→audited Blender builder boundary is mandatory for new tool paths. Closed API experiments are opt-in, credential bounded and measurable. No API required for G0.
 5. Generated script execution is bounded and must not write outside owned work directories. Detect failure, keep diagnostic logs, clean owned child processes.
 6. Geometry invariants checked deterministically in a separate Blender session; visual score cannot replace geometric evidence.
 7. Every outbound paid model call, including retries and VLM judges, must pass through the per-call started/settled private cost ledger. Use the versioned model price card to record uncached, cached read, 30m/12h cache writes, output and reasoning subset; unknown usage/price is UNKNOWN, never $0. Mandatory private GCS log+summary proof before a G1 run is accepted. See docs/features/model-cost-observability.md.
@@ -40,3 +46,7 @@ python3 -m geometry_harness showcase validate ci-artifacts/showcase/g0
 ```
 
 Read relevant source rather than all inherited template docs. Converge parallel work into one vertical deliverable, maintain fast tests and never weaken a legitimate gate to green a failing CI run.
+
+## Performance experiment development gate
+
+Instrument before optimising. New strategies must report real critical-path wall time, model turns, token cost and quality on the same frozen tasks, preserving failures/timeouts/UNKNOWN. A mocked unit test is never a Blender model-quality win. Preserve cross-run source SHA, model and frozen dataset/scorer provenance. Partner customer performance (~26 min reported) is only a hypothesis until approved real traces. Docs-only updates need cheap CI; real model calls require opt-in approved budgets and private ledger/GCS proof. Follow the currently pinned central Mac mini runner policy; do not register runner labels from this public repo.
