@@ -166,3 +166,73 @@ per-task RNG initialization in an isolated scratch cohort, invoking the
 unchanged pinned scorer once per task. Compute a *new* per-task-seeded
 baseline and counterfactual, never overwrite the historical run. Repeatedly
 running the existing six-task scorer with `--seed 0` does not solve it.
+
+## Actual operator 5-scene shape observations (2026-10-28)
+
+The authorized operator completed frozen scorer and reference verification
+(`frozen_scorer_matches=true`, `frozen_references_match=true`) and
+independently confirmed **5/6 generated GLBs**. The original 2/6 paid source
+status remains immutable. This is an **observed descriptive, unpaired**
+five-scene Chamfer run; source code, reference GLBs and full prompts remain
+private and are not copied to this repository.
+
+| Task | Source | CD | CD yaw-min | Status |
+| --- | --- | ---: | ---: | --- |
+| AquariumTank_seed0 | recovered name-only | 0.04923519730128536 | 0.028346598152854535 | OK |
+| ArmChair_seed0 | recovered name-only | 0.03720740155858683 | 0.03720740155858683 | OK |
+| Balloon_seed0 | original | 0.6380648866633449 | 0.5785731185346104 | OK |
+| Bottle_seed0 | recovered name-only | 0.013277971985460558 | 0.013277971985460558 | OK |
+| BrainCoral_seed0 | unrecovered token exhaustion | N/A | N/A | NO_GEN_GLB |
+| CoffeeTable_seed0 | original | 0.044120591181097436 | 0.044120591181097436 | OK |
+
+The observed five-scene **conditional mean CD** is
+`0.15638120973795502`, with **run-relative penalized mean CD**
+`0.2898338964474654`. These are not official leaderboard scores and
+MUST NOT be portrayed as a causal quality improvement from the old two-scene
+conditional mean (`0.33838396924096587`) or old dynamic penalized mean
+(`0.7474027587207573`): different accepted subset and advancing sampling
+RNG. Balloon dominates the distance; its geometry should be reviewed
+separately. Even low CD does not prove prompt-specific shape semantics,
+proper real-world dimensions, materials or detailed visual fidelity.
+
+The two original tasks had historical CD `0.04215983617482963`
+(CoffeeTable) / `0.6346081023071021` (Balloon) but newly observed
+`0.044120591181097436` / `0.6380648866633449`. The exact original
+pair score gate fails as expected when the upstream scorer advances one RNG
+across the now-five successful tasks; no reference/scorer provenance mismatch
+was observed.
+
+### A new reproducible per-task sampling protocol (operator action pending)
+
+The repo now includes `geometry_harness.evaluation.paired_task_shape`: it
+first **revalidates the entire same private evidence chain** and the published
+frozen scorer script, then runs the *unchanged* pinned scorer in independent
+temporary result roots **once per task** with seed 0 and 8192 sample points.
+It includes both baseline and candidate GLB scoring for CoffeeTable/Balloon
+to verify exact same-seed scores; then scores the three recovered candidates
+independently. BrainCoral remains missing. The output has a new protocol
+name, separated from all prior runs. No API calls, new Blender exports,
+new reference downloads or edits of existing evidence are involved.
+
+From the same authorized Mac, in the isolated `scorer-env`:
+
+    cd ~/Projects/3d-rendering-llm
+    git pull --ff-only
+    export PYTHONPATH=src
+    ROOT="$HOME/geometry-evidence"
+    python3 -m geometry_harness.evaluation.paired_task_shape \
+      --original "$ROOT/luna-six-original/historical-evidence" \
+      --baseline-stage "$ROOT/luna-six-shape-stage" \
+      --derived "$ROOT/luna-six-native-name-ablation-01" \
+      --existing-stage "$ROOT/luna-six-five-scene-shape-01" \
+      --upstream "$ROOT/3dcodebench-scorer" \
+      --refs "$ROOT/luna-six-reference-glbs" \
+      --out "$ROOT/luna-six-per-task-chamfer-01"
+
+The fresh output contains `paired-one-task-chamfer.json`, plus isolated
+raw metric JSON, generated GLB SHA and stdout/stderr for each of **7 scorer
+invocations** (2 original baseline + 5 candidate). Keep this output **private**.
+The baseline and counterfactual conditional means still cover 2 vs 5 valid
+scenes and are not identical-task paired *quality improvements*. This new
+protocol gives invariant per-task sampled CD regardless of task omissions;
+the original run's historical CD remains unchanged.
