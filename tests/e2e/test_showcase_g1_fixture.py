@@ -23,6 +23,12 @@ class SafeG1BlenderTests(unittest.TestCase):
         self.assertTrue((root / "artifacts" / "scene.blend").read_bytes().startswith(b"BLENDER"))
         self.assertGreater((root / "artifacts" / "preview.png").stat().st_size, 100)
         self.assertTrue((root / "index.html").is_file())
+        trace = json.loads((root / "performance-summary.json").read_text())
+        self.assertEqual(trace["status"], "COMPLETE")
+        self.assertIn("blender.build", {x["name"] for x in trace["spans"]})
+        self.assertIn("scene.reopen", {x["name"] for x in trace["spans"]})
+        self.assertEqual(trace["unsettled_span_count"], 0)
+        self.assertIn("trace.jsonl", {a["path"] for a in result["artifacts"]})
 
     def test_unsafe_model_code_fails_closed_without_render(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -32,6 +38,8 @@ class SafeG1BlenderTests(unittest.TestCase):
             self.assertFalse((target / "artifacts" / "scene.blend").exists())
             manifest = json.loads((target / "showcase-manifest.json").read_text())
             self.assertEqual(manifest["status"], "FAIL")
+            trace = json.loads((target / "performance-summary.json").read_text())
+            self.assertEqual(trace["status"], "FAIL")
             self.assertEqual(manifest["evidence_type"], "trusted_fixture_safe_literal_bpy_to_blender")
             self.assertFalse(Path("/tmp/unsafe_g1_marker").exists())
 
