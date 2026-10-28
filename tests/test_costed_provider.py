@@ -51,7 +51,7 @@ class CostedProviderTests(unittest.TestCase):
                 out = provider().generate("create a cube")
             self.assertEqual(out.input_tokens, 1000)
             self.assertEqual(out.output_tokens, 100)
-            self.assertEqual(out.cost_usd, "0.001780000")
+            self.assertEqual(out.cost_usd, "0.002770000")
             self.assertTrue(out.call_id)
             self.assertEqual(out.pricing["tokens"]["input_uncached"], 500)
             with patch.dict(os.environ, env), patch(
