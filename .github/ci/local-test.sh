@@ -62,6 +62,9 @@ if [[ -f pyproject.toml ]]; then
   GEOMETRY_ARCH_FIXTURE_DIR="$PWD/ci-artifacts/showcase/arch01-fixture" \
     python3 -m unittest discover -s tests/e2e -p 'test_dxf_walls_blender.py' -v
   echo "ARCH-01 bounded real DXF to native Blender geometry verified; zero model calls."
+  GEOMETRY_NATIVE_ALIAS_FIXTURE_DIR="$PWD/ci-artifacts/showcase/name-only-fixture" \
+    python3 -m unittest discover -s tests/e2e -p 'test_native_name_ablation_blender.py' -v
+  echo "BH-02 synthetic three-task strict alias ablation: real native scene evidence, zero model calls."
   echo "G0 verified on real Blender; outputs in ci-artifacts/showcase/g0."
   exit 0
 fi
