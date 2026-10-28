@@ -4,6 +4,7 @@ These tests never download the 1.95GB public archive and never call an API.
 """
 import io
 import json
+import struct
 from pathlib import Path
 import tarfile
 import tempfile
@@ -22,7 +23,7 @@ def fixture(base: Path, *, change=None, omit=None, symlink=None):
     with tarfile.open(archive,"w:gz") as tar:
         for task in EXPECTED_IDS:
             for name in ("prompt_description.txt","prompt_instruction.txt",f"{task}.py",f"{task}.glb"):
-                data=(b"glTF"+b"\0"*64 if name.endswith(".glb")
+                data=(b"glTF"+struct.pack("<II",2,76)+b"\0"*64 if name.endswith(".glb")
                       else (f"{task}/{name}\n".encode()))
                 original=source/"3DCodeBench"/task/name
                 if not name.endswith(".glb"):
