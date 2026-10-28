@@ -2,6 +2,17 @@
 
 Status: **target design, not as-built** (2026-10-26). Implement only the smallest subset consumed by the current vertical milestone. Product intent lives in product.md; milestone execution and dependencies live in workstreams/geometry-harness.md.
 
+
+## Target extension (planned 2026-10-28): performance-aware geometry harness
+
+**Design, not implemented.** Add `ExecutionTrace` hierarchy and critical-path report linked to the existing cost ledger, `GeometryIssue` typed read-only deterministic checks, `TypedSceneOperation` guarded mutations, `RevisionRecord` checkpoints/rollback, and `RepairDecision` budget-aware strategy selection. See [active workstream](workstreams/geometry-harness.md) and [repair policy](features/repair-policy.md). Order is **safe parse/build → independent deterministic geometry checks → cheap multiview → optional independent visual judge → bounded scoped repair**. Never directly execute model-authored Python: the current G1 implementation accepts bounded AST literal geometry via audited Blender builder. MCP is an optional transport, not privileged execution; only authorized whitelisted operations may pass.
+
+`domains/architecture/` is a **separate plugin-style vertical**, not a dependency of generic text-to-3D. Structured DXF→domain spec→trusted Blender is different from generated 2D concept ablation. The engine can choose no-AI deterministic CAD parsing, cloud generation, or open-weight local execution based on explicit profile and capability/budget—not silent fallback. Keep native scene objects and stable IDs independent of provider.
+
+Proposed source ownership (create folders only when consumed): `telemetry/`, `validation/`, `revisions/`, `repair/`, `execution/`, `providers/local/`, `domains/architecture/`, `integrations/dcc/`. Preserve `costs/` as the audit ledger, `evaluation/` as quality comparison and `blender/` as the trusted build/inspect boundary. No second generic schema framework. Performance metrics are **actual wall time/critical path** and per-stage/model ledger, not a sum of overlapping spans.
+
+Dependencies and contracts: [Agent tracing](features/agent-performance.md), [Efficiency benchmark](features/harness-efficiency-experiments.md), [Architecture vertical](features/architecture-2d-to-3d.md), [External integration](features/external-integration-contract.md). None of these planned capabilities is an as-built claim.
+
 ## Benchmark-driven design addendum (2026-10-27)
 
 Blender remains the primary native modeling/render engine. Do **not** introduce CADCraft or a 2D-first processing requirement in the production path. Scientific evidence motivates optional reference-based ablations, not a predetermined winner.
@@ -23,7 +34,7 @@ Prompt/spec -> ProviderAdapter (cloud agent/LLM or local open-weight LLM)
 -> BlenderSession + renderer -> DeterministicValidator -> optional VisualJudge
 -> RevisionStore + RunManifest -> CLI, PNG gallery and export.
 
-**Code-first:** generate reproducible Blender Python in an isolated workspace, run a bounded Blender subprocess, store source and native .blend, then preview and validate. The generated script and declared assets are authoritative; renders and GLB are derived.
+**Code-first target:** emit a constrained plan/source artifact, compile only an explicitly supported safe subset to trusted Blender operations and store source/native .blend, then preview and validate. Arbitrary AI-generated Python is not an acceptable production execution path. The generated script and declared assets are authoritative; renders and GLB are derived.
 
 **Tool-first:** connect to a Blender session via dcc-mcp-blender + dcc-mcp-core, discover/describe/call whitelisted tools. A typed operation journal records stable target IDs, preconditions, revisions and postconditions. Blender state is never considered replayable just because a tool call succeeded.
 

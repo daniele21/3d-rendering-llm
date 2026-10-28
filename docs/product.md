@@ -1,18 +1,18 @@
 # 3D Rendering LLM — product intent
 
-Status: planned; this repository has not yet implemented the product. This is the intended durable product direction, not a statement of current capabilities.
+Status: evolving product intent; G0 deterministic and a narrow G1 safe-AST-to-Blender E2E are implemented, but full product, repair/local/CAD are not. This is the intended durable product direction, not a statement of current capabilities.
 
 ## Mission
 Enable developers and makers to turn natural-language requests into inspectable, editable and verifiable 3D assets, initially using commercial AI APIs to establish quality baselines and ultimately using open-weight LLMs/VLMs with entirely local inference on Apple Silicon.
 
 ## Primary users
-Developers experimenting with AI-generated Blender assets and makers who want to create, inspect, render and incrementally revise small 3D objects without writing every Blender script manually.
+Primary: developers/makers generating and incrementally editing safe, verifiable Blender assets on Apple Silicon. Secondary **discovery track**, not yet an adopted enterprise product: studios needing private structured planimetry 2D→3D and specific measurable changes via a domain adapter. Customer/project/document management and full CAD/BIM certification are not an MVP goal.
 
 ## Core job and value
 Prompt -> valid Blender scene -> PNG preview -> inspectable .blend and GLB -> targeted edits -> measured feedback. Every development slice must unlock a real, repeatable user result. Compare code generation, typed tools and hybrid editing using the same tasks.
 
 ## Differentiation
-Local-first architecture and an offline-ready trust boundary; model-independent agent/tool contracts; deterministic geometry checks plus optional visual judgement; reproducible scene revisions; honest quality/cost/latency benchmarks.
+Local-first architecture and a verifiable no-egress goal; model-independent typed agent/tool contracts; **deterministic validation before costly vision/reasoning**, scoped bounded repair and checkpoint/rollback; **measured per-stage critical path and cost per accepted artifact**; separate generic 3D and architecture domain journeys. These are product goals; implementation state lives in current-state.md.
 
 ## Non-goals for MVP
 Photorealistic full scenes, animation, large worlds, CAD certification, 2D editing, image-to-mesh neural generation, model training, hosted account infrastructure and a complex graphical editor. Evaluate additions only when experiments show value.
@@ -25,7 +25,10 @@ Photorealistic full scenes, animation, large worlds, CAD certification, 2D editi
 5. Simple CLI and lightweight visual gallery before broad UI investment.
 6. Bounded memory, cost, process lifetime and generated-code permissions.
 7. Benchmark-driven agile delivery: every sprint ends in real, human-inspectable Blender E2E plus negative case, and compares frozen input tasks, geometry, visual quality, editing preservation, latency and cost against the accepted baseline.
-8. Start with code-first Blender; trial structured plans, generated 2D references, multiview feedback and MCP only as isolated measured hypotheses. No obligatory CADCraft/2D-first step.
+8. Start with constrained code-first Blender; trial structured plans, generated 2D references, multiview, bounded scoped repair and MCP as isolated measured hypotheses. No obligatory CADCraft/2D-first step for generic generation.
+9. Prefer deterministic tools over LLM turns when the answer is objective and authorized; preserve independence of provider and trusted geometry builder.
+10. Structured DXF import is a separate opt-in domain vertical; measure against deterministic builder, not an image-only benchmark.
+11. Partner/customer files stay private and are not shipped in public tests, docs or artifacts.
 
 ## Quality attributes
 | Attribute | Product promise | Engineering owner |
