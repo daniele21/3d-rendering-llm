@@ -132,6 +132,7 @@ def create_g1(root: Path, *, fixture_source: str | None = None) -> dict:
     model_result = None
     status = "FAIL"
     errors: list[str] = []
+    previous_span_id = None
     try:
         if fixture_source is None:
             cost_path = default_ledger_path()
@@ -140,44 +141,50 @@ def create_g1(root: Path, *, fixture_source: str | None = None) -> dict:
             with tracer.span("llm.generate") as span:
                 model_result = OpenAICompatibleCodeProvider.from_env().generate(PROMPT)
                 span.cost_call_id = model_result.call_id
+            previous_span_id = span.span_id
             raw_source = model_result.code
         else:
             raw_source = fixture_source
         (artifacts / "model-generated.py").write_text(raw_source, encoding="utf-8")
-        with tracer.span("code.compile"):
+        with tracer.span("code.compile", depends_on=(previous_span_id,) if previous_span_id else ()) as stage:
             parts = compile_bpy_subset(raw_source)
+        previous_span_id = stage.span_id
         (artifacts / "scene-spec.json").write_text(json.dumps(parts, indent=2) + "\n")
-        with tracer.span("geometry.validate"):
+        with tracer.span("geometry.validate", depends_on=(previous_span_id,)) as stage:
             checks = _table_semantics(parts["objects"])
             if any(x["status"] != "PASS" for x in checks):
                 raise ShowcaseError("Generated geometry fails table part/contact specification")
+        previous_span_id = stage.span_id
         binary = blender_binary()
         if not binary:
             raise ShowcaseError("Blender not installed on the target runner")
-        with tracer.span("blender.build"):
+        with tracer.span("blender.build", depends_on=(previous_span_id,)) as stage:
             _safe_run([binary, "-b", "--factory-startup", "--python-exit-code", "14",
                        "--python", str(BUILDER), "--",
                        "--spec", str(artifacts / "scene-spec.json"),
                        "--out", str(artifacts)], logs / "build.txt")
+        previous_span_id = stage.span_id
         if not (artifacts / "scene.blend").is_file():
             raise ShowcaseError("Trusted builder did not save native Blender scene")
-        with tracer.span("scene.reopen"):
+        with tracer.span("scene.reopen", depends_on=(previous_span_id,)) as stage:
             _safe_run([binary, "-b", str(artifacts / "scene.blend"),
                        "--python-exit-code", "14", "--python", str(INSPECT), "--",
                        "--spec", str(artifacts / "scene-spec.json"),
                        "--output", str(artifacts / "geometry.json")], logs / "inspect.txt")
+        previous_span_id = stage.span_id
         measured = json.loads((artifacts / "geometry.json").read_text())
         if not measured.get("passed"):
             raise ShowcaseError("Fresh-process geometric checks failed")
         # Evaluate the saved native scene against the *task* requirements
         # rather than only the dimensions proposed by the model itself.
-        with tracer.span("geometry.validate"):
+        with tracer.span("geometry.validate", depends_on=(previous_span_id,)) as stage:
             geometry_report = validate_geometry(measured, table_validation_contract())
             (root / "geometry-issues.json").write_text(
                 json.dumps(geometry_report, indent=2) + "\n", encoding="utf-8")
             if geometry_report["status"] != "PASS":
                 raise ShowcaseError("Native scene fails independent floor/support constraints")
-        with tracer.span("blender.render_preview"):
+        previous_span_id = stage.span_id
+        with tracer.span("blender.render_preview", depends_on=(previous_span_id,)) as stage:
             _safe_run([binary, "-b", str(artifacts / "scene.blend"),
                        "--python-exit-code", "14", "--python", str(RENDER_VIEWS),
                        "--", "--out", str(root / "views")], logs / "views.txt", limit=120)
