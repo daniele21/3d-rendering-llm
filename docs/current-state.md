@@ -10,6 +10,8 @@
 | G1 controlled AST→Blender (trusted fixture, NO AI) including injection rejection | **PASS technical** | [Mac mini run 40669194991](https://github.com/daniele21/local-runner-infra/actions/runs/40669194991) |
 | First paid GPT-6.1 Sol request and token ledger; NO Blender execution | **PASS** | [Cost-probe run 40668374405](https://github.com/daniele21/local-runner-infra/actions/runs/40668374405), **$0.014708000** |
 | First paid GPT-6.1 Sol → safe Blender geometry → .blend + PNG + independent geometric checks + GCS | **PASS internal G1 smoke** | [Real G1 run 40669515643](https://github.com/daniele21/local-runner-infra/actions/runs/40669515643), **$0.003666000** |
+| G1 safe cube+cylinder+sphere primitives, fresh Blender reopen, GCS | **PASS technical, fixture without AI** | [main Mac mini run 40675988573](https://github.com/daniele21/local-runner-infra/actions/runs/40675988573), **33 private GCS objects** |
+| Benchmark generator-only prompt staging / hashes, no scorer reference leakage | **PASS offline contracts** | [PR #27](https://github.com/daniele21/3d-rendering-llm/pull/27), actual dataset revision still unpinned |
 | Full G1 quality benchmark on pinned 3DCodeBench smoke IDs and upstream scorer | **NOT DONE** | Task selection, dataset licensing and version isolation still pending |
 | Automated visual quality judgement, live editing, repair, offline models | **NOT DONE** | S2+ |
 
@@ -24,8 +26,8 @@ It contains original AI Python source (NOT executed), accepted safe-literal geom
 
 - The default cloud adapter has a **manual explicit** `GEOMETRY_ALLOW_REMOTE_INFERENCE=1`, requires project API secret, uses `gpt-6.1-sol` for the initial internal smoke, and never makes paid calls from ordinary source PR or G0.
 - G0 and the G1 fixture use real Blender 5.2.3 on macOS ARM64.
-- Model-authored Python is currently *never* handed to a Blender subprocess. We parse a **strict, literal, five-cube-capable Blender bpy subset** using Python AST (no exec/eval), reject imports/functions/loops/network/file ops, convert it to validated data, then execute our own audited Blender builder and an independent inspector in a new Blender process.
-- This means **G1 currently supports only a narrow set of literal cube-based shapes**, not arbitrary procedural Blender generation. Native editability is preserved in the produced scene. Future quality comparisons must state this restriction.
+- Model-authored Python is currently *never* handed to a Blender subprocess. We parse a **strict, bounded Blender bpy subset supporting cubes, cylinders and UV spheres** using Python AST (no exec/eval), reject imports/functions/loops/network/file ops, convert it to validated data, then execute our own audited Blender builder and an independent inspector in a new Blender process.
+- This means **G1 currently supports only a narrow set of literal cube-, cylinder- and sphere-based shapes**, not arbitrary procedural Blender generation. Native editability is preserved in the produced scene. Future quality comparisons must state this restriction.
 - Full upstream 3DCodeBench nominal environment targets Blender 5.0; the Mac fixture used Blender 5.2.3. Do **not** publish official comparable benchmark results before pinning/verifying the scorer and licence environment.
 
 ## Next work in parallel
@@ -33,7 +35,7 @@ It contains original AI Python source (NOT executed), accepted safe-literal geom
 | Lane | What is ready | Next acceptance work | Tracking |
 | --- | --- | --- | --- |
 | A: real AI product journey | First internal real table AI→Blender success | Inspect actual private PNG/.blend and improve compiler coverage safely, keeping editable named objects | [G1 #7](https://github.com/daniele21/3d-rendering-llm/issues/7) |
-| B: benchmark | Leak-free catalog adapter with 6/24 provisional selection | Pin Hugging Face dataset revision and usage rights; choose six real public smoke IDs; verify on real Blender 5.0/profile | [BH-01 #4](https://github.com/daniele21/3d-rendering-llm/issues/4) |
+| B: benchmark | Leak-free catalog adapter with 6/24 provisional selection | Leak-safe prompt-only staging and hash checks now implemented on main. Next pin real Hugging Face revision and rights; curate six public smoke IDs; verify Blender 5.0/profile and independent scorer | [BH-01 #4](https://github.com/daniele21/3d-rendering-llm/issues/4) |
 | C: evaluation | Paired FAIL/UNKNOWN comparator and G1 real Blender geometry checks | Per-task gallery, 4-view rendering and independent prompt-criterion scoring, frozen baseline | [BH-02 #5](https://github.com/daniele21/3d-rendering-llm/issues/5) |
 | D: accounting/FinOps | Live per-call cached/read/write token ledger and immutable private GCS events | Aggregate by model/stage/day, provide cost dashboard and reconcile against actual OpenAI invoice plus GCS/compute | [COST-02 #23](https://github.com/daniele21/3d-rendering-llm/issues/23) |
 
