@@ -74,6 +74,39 @@ class LunaSmokeTests(unittest.TestCase):
                 http.assert_not_called()
             self.assertFalse((root/"out").exists())
 
+    def test_last_billed_model_failure_is_counted_not_silently_dropped(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            public, suite = inputs(root)
+            out = root/"out"
+            calls = {"n": 0}
+            def respond(*_args, **_kwargs):
+                calls["n"] += 1
+                data = answer()
+                if calls["n"] == 6:
+                    data["choices"][0]["finish_reason"] = "length"
+                return FakeResponse(data)
+            env = {"GEOMETRY_ALLOW_REMOTE_INFERENCE":"1", "GEOMETRY_CLOUD_MODEL":MODEL,
+                   "GEOMETRY_CLOUD_API_KEY":"fake-not-real",
+                   "GEOMETRY_COST_LEDGER":str(out/"costs"/"events.jsonl")}
+            with patch.dict(os.environ, env), patch(
+                    "geometry_harness.benchmark_smoke.blender_binary",
+                    return_value="/fake/not/executed"), patch(
+                    "geometry_harness.providers.compatible.urlopen",
+                    side_effect=respond):
+                result = run(out, public, suite)
+            self.assertEqual(calls["n"], 6)
+            self.assertEqual(result["status"], "COMPLETE_INTERNAL_SMOKE")
+            self.assertEqual(result["task_failures"], 6)
+            self.assertEqual(result["model_calls_recorded"], 6)
+            self.assertEqual(result["cost_reconciliation"], "COMPLETE")
+            self.assertEqual(result["aborted_reason"], "ProviderError")
+            self.assertEqual(reconcile(load_events(out/"costs"/"events.jsonl"))["priced_subtotal_usd"],
+                             "0.000600000")
+            last = json.loads((out/"tasks"/IDS[-1]/"result.json").read_text())
+            self.assertEqual(last["provider_outcome"], "FAIL_OR_NOT_RUN")
+            self.assertEqual(last["error_class"], "ProviderError")
+
     def test_six_invalid_3d_scripts_are_six_costed_failures_no_exec(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
