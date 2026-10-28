@@ -187,17 +187,22 @@ def _precheck_scorer(upstream: Path, refs: Path) -> None:
 
 
 def _validate_resumable_stage(output: Path, historical: dict,
-                              originals: dict, converted: dict) -> dict:
+                              originals: dict, converted: dict, *,
+                              allow_scored_readonly: bool = False) -> dict:
     """Allow a previously *completed* export stage, never partial/tampered files.
 
     The operator must still provide the immutable original and native evidence,
     which are fully re-audited before we accept any staged candidate GLB.
     """
-    if not output.is_dir() or (output / "counterfactual-shape-results.json").exists():
+    if not output.is_dir() or (
+        not allow_scored_readonly and (output / "counterfactual-shape-results.json").exists()
+    ):
         raise ShapeGateError("Resume requires an existing unscored derived stage")
-    if ((output / "shape-scorer-provenance.json").exists()
-            or (output / "results" / "text_to_3D" / MODEL / "_metrics" /
-                "shape_chamfer.json").exists()):
+    if not allow_scored_readonly and (
+        (output / "shape-scorer-provenance.json").exists()
+        or (output / "results" / "text_to_3D" / MODEL / "_metrics" /
+            "shape_chamfer.json").exists()
+    ):
         raise ShapeGateError("Existing scorer output needs manual review; refusing to overwrite")
     stage = _read(output / "scorer-staging.json", output)
     if (stage.get("schema_version") != 1 or stage.get("experiment") != EXPERIMENT
@@ -247,6 +252,124 @@ def _validate_resumable_stage(output: Path, historical: dict,
         else:
             raise ShapeGateError("Unsupported GLB cohort in staging")
     return stage
+
+
+def diagnose_existing(original: Path, baseline: Path, derived: Path,
+                      output: Path, upstream: Path, refs: Path) -> dict:
+    """Read-only verified diagnostic of a previously completed scoring attempt.
+
+    Upstream's *single advancing RNG* changes the two historical per-instance
+    sample draws when newly accepted earlier alphabetical tasks consume RNG.
+    A metric difference is thus not proof of an altered source or reference.
+    Never upgrade to PAIRED when baseline scores differ.
+    """
+    original, baseline, derived, output, upstream, refs = (
+        p.expanduser().resolve()
+        for p in (original, baseline, derived, output, upstream, refs)
+    )
+    _precheck_scorer(upstream, refs)
+    historical, previous, old, originals, recovered = _preflight(original, baseline, derived)
+    _validate_resumable_stage(output, historical, originals, recovered,
+                              allow_scored_readonly=True)
+    current = _read(output / "shape-scorer-provenance.json", output)
+    metric = _read(output / "results" / "text_to_3D" / MODEL /
+                   "_metrics" / "shape_chamfer.json", output)
+    # Match both the historical recorded scorer identity and the *current*
+    # immutable upstream script checked out at its frozen Git commit.
+    import subprocess
+    commit = subprocess.run(
+        ["git", "-C", str(upstream), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=True, timeout=5).stdout.strip()
+    script = _file(upstream, "metrics/shape_chamfer.py")
+    pinned_blob = subprocess.run(
+        ["git", "-C", str(upstream), "show",
+         UPSTREAM_COMMIT + ":metrics/shape_chamfer.py"],
+        capture_output=True, check=True, timeout=5).stdout
+    script_sha = _sha(script)
+    same_scorer = (
+        commit == UPSTREAM_COMMIT
+        and hashlib.sha256(pinned_blob).hexdigest() == script_sha
+        and script_sha == previous.get("upstream_shape_scorer_sha256")
+        and script_sha == current.get("upstream_shape_scorer_sha256")
+        and current.get("upstream_commit") == previous.get("upstream_commit")
+        and current.get("upstream_commit") == UPSTREAM_COMMIT
+        and current.get("dataset_revision") == historical["dataset_revision"]
+    )
+    # Ensure all pinned references are still the ones recorded by both scoring
+    # runs, instead of trusting their source path or the new report alone.
+    ref_manifest = _read(refs / "reference-provenance.json", refs)
+    recorded = current.get("reference_glb_sha256")
+    original_refs = previous.get("reference_glb_sha256")
+    reference_rows = ref_manifest.get("refs", [])
+    catalog = {x["task_id"]: x for x in reference_rows
+               if isinstance(x, dict) and isinstance(x.get("task_id"), str)}
+    ref_ok = (isinstance(recorded, list) and recorded == original_refs
+              and len(recorded) == len(EXPECTED_IDS)
+              and set(catalog) == set(EXPECTED_IDS))
+    if ref_ok:
+        for row in recorded:
+            task = row.get("task_id")
+            if task not in catalog:
+                ref_ok = False
+                break
+            reference = _file(refs, f"{task}/glb/{task}.glb")
+            if (_sha(reference) != row.get("sha256") or
+                    _sha(reference) != catalog[task].get("reference_glb_sha256") or
+                    reference.stat().st_size != catalog[task].get("reference_glb_bytes")):
+                ref_ok = False
+                break
+    rows = metric.get("per_instance")
+    valid_rows = (isinstance(rows, list) and len(rows) == len(EXPECTED_IDS)
+                  and metric.get("n_instances") == len(EXPECTED_IDS)
+                  and metric.get("n_ok") == 5
+                  and len({x.get("instance") for x in rows if isinstance(x, dict)}) == 6
+                  and {x.get("instance") for x in rows if isinstance(x, dict)}
+                  == set(EXPECTED_IDS)
+                  and all(x.get("status") == "OK" for x in rows
+                          if x["instance"] != "BrainCoral_seed0")
+                  and next(x for x in rows if x["instance"] == "BrainCoral_seed0")
+                  .get("status") == "NO_GEN_GLB")
+    paired = _paired_metrics(metric, old) if valid_rows else False
+    old_by_id = {x["instance"]: x for x in old["per_instance"]}
+    new_by_id = {x["instance"]: x for x in rows} if valid_rows else {}
+    original_differences = []
+    if valid_rows:
+        for task in ORIGINAL_VALID:
+            original_differences.append({
+                "task_id": task,
+                "historical_cd": old_by_id[task].get("cd"),
+                "new_cd": new_by_id[task].get("cd"),
+                "historical_cd_yawmin": old_by_id[task].get("cd_yawmin"),
+                "new_cd_yawmin": new_by_id[task].get("cd_yawmin"),
+            })
+    verified = same_scorer and ref_ok and valid_rows
+    return {
+        "experiment": EXPERIMENT,
+        "mode": "READ_ONLY_EXISTING_SCORER_DIAGNOSTIC",
+        "frozen_scorer_matches": same_scorer,
+        "frozen_references_match": ref_ok,
+        "five_scene_coverage_confirmed": bool(valid_rows),
+        "original_pair_exact_scores_reproduce": paired,
+        "shape_status": (
+            "DESCRIPTIVE_5_SCENES_NOT_PAIRED" if verified and not paired else
+            "PAIRED_5_SCENES" if verified and paired else
+            "UNKNOWN_PROVENANCE_OR_COHORT_FAILED"
+        ),
+        "original_score_differences": original_differences,
+        "per_instance": rows if verified else None,
+        "conditional_cd": metric.get("cd", {}).get("conditional_mean") if verified else None,
+        "penalized_cd": metric.get("cd", {}).get("penalized_mean") if verified else None,
+        "n_scored": 5 if verified else None,
+        "semantic_quality": "UNKNOWN_NOT_SEMANTICALLY_JUDGED",
+        "model_calls": 0,
+        "warning": (
+            "Upstream scorer has one advancing run-global RNG. Newly present "
+            "alphabetically prior scenes change sample draws for baseline "
+            "tasks even with the same seed. Descriptive scores are NOT paired "
+            "historical CD; use per-task isolated resampling to create a new "
+            "common protocol. Do not rewrite original evidence."
+        ),
+    }
 
 
 def run(original: Path, baseline: Path, derived: Path, output: Path, *,
@@ -360,10 +483,18 @@ def main(argv=None) -> int:
     p.add_argument("--refs", type=Path)
     p.add_argument("--resume", action="store_true",
                    help="Finish an immutable, already-exported five-scene stage after a missing scorer path")
+    p.add_argument("--diagnose-existing", action="store_true",
+                   help="Read-only validation and descriptive metrics of an already scored stage")
     a = p.parse_args(argv)
     try:
-        result = run(a.original, a.baseline_stage, a.derived, a.out,
-                     upstream=a.upstream, refs=a.refs, resume=a.resume)
+        if a.diagnose_existing:
+            if a.resume or a.upstream is None or a.refs is None:
+                p.error("Use --diagnose-existing with --upstream/--refs, without --resume")
+            result = diagnose_existing(a.original, a.baseline_stage, a.derived,
+                                       a.out, a.upstream, a.refs)
+        else:
+            result = run(a.original, a.baseline_stage, a.derived, a.out,
+                         upstream=a.upstream, refs=a.refs, resume=a.resume)
     except (ShapeGateError, OSError, ValueError, KeyError, TypeError) as exc:
         print(f"Counterfactual shape scoring rejected: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 2
