@@ -33,7 +33,7 @@ It contains original AI Python source (NOT executed), accepted safe-literal geom
 | Lane | What is ready | Next acceptance work | Tracking |
 | --- | --- | --- | --- |
 | A: real AI product journey | First internal real table AI→Blender success | Inspect actual private PNG/.blend and improve compiler coverage safely, keeping editable named objects | [G1 #7](https://github.com/daniele21/3d-rendering-llm/issues/7) |
-| B: benchmark | Leak-free catalog adapter with 6/24 provisional selection | Pin Hugging Face dataset revision and usage rights; choose six real public smoke IDs; verify on real Blender 5.0/profile | [BH-01 #4](https://github.com/daniele21/3d-rendering-llm/issues/4) |
+| B: benchmark | Leak-free catalog adapter with 6/24 provisional selection | Leak-safe prompt-only staging and hash checks now implemented on main. Next pin real Hugging Face revision and rights; curate six public smoke IDs; verify Blender 5.0/profile and independent scorer | [BH-01 #4](https://github.com/daniele21/3d-rendering-llm/issues/4) |
 | C: evaluation | Paired FAIL/UNKNOWN comparator and G1 real Blender geometry checks | Per-task gallery, 4-view rendering and independent prompt-criterion scoring, frozen baseline | [BH-02 #5](https://github.com/daniele21/3d-rendering-llm/issues/5) |
 | D: accounting/FinOps | Live per-call cached/read/write token ledger and immutable private GCS events | Aggregate by model/stage/day, provide cost dashboard and reconcile against actual OpenAI invoice plus GCS/compute | [COST-02 #23](https://github.com/daniele21/3d-rendering-llm/issues/23) |
 
