@@ -46,4 +46,4 @@ Only after the frozen benchmark baseline should we compare structured planner [#
 - [Real E2E milestone evidence rules](features/showcase-evidence.md)
 - [Live token cost records and cloud retention](features/model-cost-observability.md)
 
-The [G0 feature PR #2](https://github.com/daniele21/3d-rendering-llm/pull/2) against `main` is still open; active implementation lives on `feature/g0-blender-showcase`. Review before promoting as a stable release.
+[G0+G1 integration PR #2](https://github.com/daniele21/3d-rendering-llm/pull/2) merged into `main` on 2026-10-28 as `bf40932da49fac276c9a1d7362ca6855117dd71c`. New work branches must start from `main` and follow branch/CI gates. The legacy `feature/g0-blender-showcase` is retained for history, not the active integration target.
