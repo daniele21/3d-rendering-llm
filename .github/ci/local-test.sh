@@ -50,6 +50,9 @@ if [[ -f pyproject.toml ]]; then
     python3 -m unittest discover -s tests/e2e -p 'test_g1_primitives.py' -v
   echo "G1 cylinders and spheres verified with real Blender; zero model calls."
   echo "G1 safe AST->Blender fixture verified with zero model calls."
+  GEOMETRY_VAL_FIXTURE_DIR="$PWD/ci-artifacts/showcase/val-fixture" \
+    python3 -m unittest discover -s tests/e2e -p 'test_validation_real_blender.py' -v
+  echo "VAL-01 four-view real Blender + typed geometry tests verified."
   echo "G0 verified on real Blender; outputs in ci-artifacts/showcase/g0."
   exit 0
 fi
