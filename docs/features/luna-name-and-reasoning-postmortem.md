@@ -59,4 +59,28 @@ PYTHONPATH=src python3 -m geometry_harness.evaluation.native_name_ablation \
 
 Inspect `~/geometry-evidence/luna-six-native-name-ablation-01/native-name-ablation.json` and the derived per-task `scene.blend`, `preview.png`, `reopened-geometry.json`. An exit code of 1 means one or more **derived native** failures (no automatic retry or AI requests). Failed candidates and their Blender logs remain in the new evidence directory; the original baseline is never modified.
 
+## Actual authorized native-name ablation — 2026-10-28
+
+The operator has now run the private original-code **native** experiment `native_name_ablation` against the authenticated, immutable six-task GCS bundle and prior deterministic `postmortem.json`. Original source hashes and derived literal-name-only AST source hashes were rechecked before executing **only repository-owned** Blender builder and independent fresh-process inspector. The experiment's output reports:
+
+| Derived task | Native Blender status | Mesh objects | Error |
+| --- | --- | ---: | --- |
+| `AquariumTank_seed0` | **PASS** | 22 | none |
+| `ArmChair_seed0` | **PASS** | 15 | none |
+| `Bottle_seed0` | **PASS** | 16 | none |
+
+- **Original paid six-task run (immutable):** 2/6 native scene passes = 33.3%; CI `INCOMPLETE`; estimated model-token USD 0.004875300.
+- **Separate name-only counterfactual:** 3/3 formerly name-rejected tasks newly pass native Blender, yielding **5/6 (83.3%) counterfactual** when combined with the original two. Improvement is **+50 percentage points**, with **0 new model calls**, not a newly completed original production run.
+- **Excluded/unrecovered:** `BrainCoral_seed0` originally exhausted its 2048 output/reasoning token budget and remains missing; cannot be salvaged by renaming.
+- **No change in the safe-AST allowed operations or direct execution policy:** names alone were normalized in isolated offline candidates; all derived scenes independently reopened. 53 source mesh names were rewritten, matching 22+15+16 objects.
+- **No established new shape score:** the derived experiment explicitly returns `quality_status=UNKNOWN_NOT_SHAPE_SCORED`. Upstream Chamfer from the *historical two original scenes* has already been executed separately (see [original shape report](luna-first-shape-chamfer-results.md)): CoffeeTable CD 0.04215983617, Balloon CD 0.63460810231, conditional mean 0.33838396924, penalized six-task mean 0.74740275872. **Do not apply those two-scene aggregate means to the counterfactual five-scene set.**
+- Private derived evidence: `~/geometry-evidence/luna-six-native-name-ablation-01/native-name-ablation.json`, with per-task native `.blend`, `preview.png` and `reopened-geometry.json`; no generated Python, prompts, reference assets or other private outputs are committed to public GitHub.
+
+### Next acceptance gates
+
+1. **A/B shape scoring with identical reference/scorer:** export just the three accepted derived `.blend` scenes to GLB through the trusted `--disable-autoexec` exporter; run pinned scorer `gaoypeng/3dcodebench@42c7780...` on a **new derived five-scene cohort** with original CoffeeTable/Balloon, and frozen reference SHA/BLENDER profile. Evaluate CD and yaw-min per task. Preserve original two-scene report.
+2. **Fix root cause safely:** treat descriptive labels as data, not authority to expand the AST grammar. Design collision-free deterministic naming (stable IDs, original→alias metadata, no silent overwrite), test Latin/non-Latin, punctuation, duplicates, 48-character cutoff, and malformed/untrusted AST. Integrate into G1 only if paired native tests and new independent quality gates pass.
+3. **Separate remaining BrainCoral problem:** do a small, explicitly cost-approved Luna `reasoning_effort=none` vs `low` experiment with verified visible output/cost/latency; no inference is authorized by this offline ablation alone.
+4. Use one fixed failure policy and track `original_native_pass`, `derived_native_pass`, `shape_CD`, `semantic_quality`, `latency` and `model_token_cost` separately. Do not compare the scorer's **dynamic worst-valid-relative penalty** across cohorts as if it were a fixed absolute threshold.
+
 **Do not** upload the private generated code or reference assets into public GitHub issues/commits. Only aggregate outcomes and relative hashes may be recorded in the roadmap. Later scoring can export the accepted new `.blend` files and compute Chamfer with the **already pinned** reference meshes and scorer, but derived results must have a distinct experiment ID. Separate all four metrics: compiler pass, native scene pass, shape similarity and semantic fidelity.
