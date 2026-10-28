@@ -5,7 +5,7 @@ Owner: 3d-rendering-llm
 Read when: planning, building, validating or resuming the Geometry Harness.
 Product depth: PRODUCT_STRATEGIC (new product, runtime and trust boundary).
 Planning baseline: main at 5710a83aa573e91b1c6285eda0bace43e43720d8 (2026-10-26).
-State: **benchmark-driven sprint plan approved for proposal (2026-10-27), not implementation evidence**. G0 code is a candidate; Mac Blender + private GCS acceptance remains unverified. Later G1–G8 milestones are not implemented or validated by this document.
+State (2026-10-28): **S0 / G0 real Mac mini Blender + private GCS E2E PASS; first internal S1 / G1 real GPT-6.1 Sol→safe AST→editable Blender+PNG+cost-ledger E2E PASS. S1 benchmark acceptance remains OPEN** pending frozen 3DCodeBench cohort and independent scoring; later S2–S7+ are not claimed. Exact live runs and billing are recorded in [current-state](../current-state.md).
 
 ## Product intent
 
@@ -102,7 +102,7 @@ See [proposed architecture](../architecture.md): model-independent agent; code-f
 - **Canonical delivery state:** this workstream; **execution checklists and work boundaries:** linked GitHub issues #3–#13; **evaluation protocol and suite identity:** [benchmark-protocol.md](../features/benchmark-protocol.md); **artifact gate:** [showcase-evidence.md](../features/showcase-evidence.md).
 - Per issue attach branch/PR, exact source SHA, commands, target runner, failure evidence, gallery/GCS links and quality metrics. No GitHub issue is marked complete just because code exists.
 - At each sprint demo: open current and previous galleries side-by-side, read objective PASS/FAIL/UNKNOWN and costs, document findings and next narrow hypothesis. On rejected experiments document why and keep the baseline.
-- This roadmap change is *planning only*, not proof that GH-00/BH-01/BH-02/AI-01 are implemented.
+- This roadmap is a living plan; implementations and complete acceptance gates must be grounded in exact runs. G0 and first narrow G1 are real, but benchmark and downstream experiments remain open.
 
 ## Vertical milestone contract
 
@@ -110,8 +110,8 @@ See [proposed architecture](../architecture.md): model-independent agent; code-f
 
 | Slice | Immediately tangible result | Planned user demo | Gate / definition of done | Depends | State |
 | --- | --- | --- | --- | --- | --- |
-| G0 — Boot + render | .blend + PNG of deterministic 4-leg table, no AI | geometry showcase --milestone G0 | Fresh setup and doctor; open/re-check 5 objects, dimensions, manifest, timeout cleanup | — | ACTIVE |
-| G1 — AI creation | Text request -> first AI-rendered object | geometry run --profile cloud --mode code | Script + PNG/.blend/manifest saved; failures bounded; no MCP yet | G0 | BLOCKED |
+| G0 — Boot + render | .blend + PNG of deterministic 4-leg table, no AI | geometry showcase --milestone G0 | Fresh setup and doctor; open/re-check 5 objects, dimensions, manifest, timeout cleanup | — | TECHNICAL E2E PASS; visual review pending |
+| G1 — AI creation | Text request -> first AI-rendered object | python -m geometry_harness.g1 --output RUN (approved opt-in) | Real Sol→safe literal geometry→Blender & immutable cost evidence verified; still missing 3DCodeBench smoke evaluation | G0 | INTERNAL E2E PASS, BENCHMARK OPEN |
 | G2 — Repair loop | Four views and before/after report | geometry run --feedback geometric-visual | Geometry gates + optional independent judge + bounded retry and round evidence | G1 | BLOCKED |
 | G3 — Typed MCP edit | Recolor only tabletop, see before/after | geometry edit RUN --prompt "Blue tabletop" | Real dcc-mcp Blender edit, save/reopen and unchanged other transforms | G1 (parallel with G2) | BLOCKED |
 | G4 — Hybrid + rollback | Versions and lossless restoration | geometry rollback RUN REV | Stable IDs, action journal, replay/new-process verification and rollback | G2,G3 | BLOCKED |
