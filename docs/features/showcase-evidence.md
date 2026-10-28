@@ -1,6 +1,6 @@
 # Milestone showcase and evidence contract
 
-Status: **planned contract**, not an implemented renderer or passing 3D E2E suite.
+Status: **enforced evidence contract**. G0 real Blender+GCS gates PASS; G1 first narrow internal AI-to-native-Blender E2E PASS on 2026-10-28 [run 40669515643](https://github.com/daniele21/local-runner-infra/actions/runs/40669515643). Real 3DCodeBench scoring and visual review still pending; G2–G8 remain planned.
 Owner: showcase/test infrastructure and milestone implementation owners.
 Read when: implementing a G0–G8 acceptance test, CI artifact publication or visual review.
 Execution ordering and current states remain in [the active workstream](../workstreams/geometry-harness.md).
@@ -47,7 +47,7 @@ showcase/
 
 ### Planned commands and ownership
 
-At G0 use implemented `python3 -m geometry_harness showcase --milestone G0 --output ci-artifacts/showcase/g0`, `python3 -m geometry_harness showcase validate PATH`, and fixture-driven E2E tests. The commands exist on `feature/g0-blender-showcase` but need a successful Blender run on the target Mac mini to claim G0 DONE. Each later milestone adds its case to the same runner. `geometry showcase --milestone Gx --open` should build/open the static gallery and optionally open the native .blend in Blender; no web hosting required.
+At G0 use implemented `python3 -m geometry_harness showcase --milestone G0 --output ci-artifacts/showcase/g0`, `python3 -m geometry_harness showcase validate PATH`, and fixture-driven E2E tests. The commands exist and G0 passed the dedicated Mac mini real Blender/GCS integration on run 40664644253. Final human visual review of the private render remains part of the full acceptance ritual. Each later milestone adds its case to the same runner. `geometry showcase --milestone Gx --open` should build/open the static gallery and optionally open the native .blend in Blender; no web hosting required.
 
 Expected test hierarchy: `tests/unit/` for manifest/writer/hashes, `tests/integration/` for Blender and MCP contracts, and `tests/e2e/test_showcase_gX.py` for the real representative user path. Add a negative case per milestone (same test file or companion) proving a distinct failure signal.
 
@@ -58,7 +58,7 @@ All test paths below are **planned** and become real when that milestone is impl
 | Milestone / planned E2E | Task and demonstrable outputs | Automatic assertions + negative case |
 | --- | --- | --- |
 | **G0** `test_showcase_g0.py` | Create four-leg table deterministically; `artifacts/scene.blend`, `artifacts/preview.png`, `contact-sheet.png`, manifest | Blender opens saved file; five stable named objects, known dimensions/contacts, valid PNG and no leaked processes. Negative: missing Blender binary or forced render timeout reports precise failure and cleans up. |
-| **G1** `test_showcase_g1.py` | Prompt creates table/chair with real closed AI; generated `artifacts/generate.py`, `scene.blend`, `preview.png`, prompt and usage metadata | Actual provider call recorded; produced script executes and saved scene reopens; requested parts present. Negative: invalid script/provider rejection becomes a bounded FAIL with source and logs, not empty output. |
+| **G1** `test_showcase_g1.py` (first internal narrow safe-AST smoke passed; official 3DCodeBench pending) | Prompt creates table/chair with real closed AI; generated `artifacts/generate.py`, `scene.blend`, `preview.png`, prompt and usage metadata | Actual provider call recorded; produced script executes and saved scene reopens; requested parts present. Negative: invalid script/provider rejection becomes a bounded FAIL with source and logs, not empty output. |
 | **G2** `test_showcase_g2.py` | Deliberately flawed geometry → multiview feedback/retry; `artifacts/views/{front,side,top,iso}.png`, `artifacts/before-after.png`, `artifacts/rounds.json`, checks and judge scores | Checks identify injected disconnected leg; initial and repaired revisions separately retained; final constraints checked, attempts bounded; report repair success/failure without fabricating it. Negative: exhausted retry budget returns FAIL, keeping last valid evidence. |
 | **G3** `test_showcase_g3.py` | Change only tabletop material using live dcc MCP; `artifacts/before.png`, `after.png`, `tool-actions.json`, edited `scene.blend` | Confirm MCP tool invocation, targeted material change, all unrelated transforms and names unchanged, saved scene reopens. Negative: unknown object/tool timeout makes no destructive partial commit. |
 | **G4** `test_showcase_g4.py` | Increase table width → replay in fresh Blender process → rollback; `artifacts/{original,edited,rolledback}.png`, `revisions.json`, `replay-diff.json`, native checkpoints | Replay produces semantically equivalent object geometry/materials; rollback restores baseline measured properties (do not require byte-identical .blend). Negative: corrupted journal/checkpoint triggers recovery without losing accepted revision. |
