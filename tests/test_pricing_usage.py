@@ -58,6 +58,34 @@ class PricingTests(unittest.TestCase):
         # (1000*2 + 4000*.1 + 3000*2.5 + 4000*5 + 500*10)/1e6
         self.assertEqual(r["estimated_usd"], "0.034900000")
 
+    def test_gpt6_luna_short_tokens_and_cache(self):
+        # (1000*.10 + 4000*.01 + 7000*.125 + 500*.50)/1e6
+        result = price_usage(chat(), model="gpt-6-luna")
+        self.assertEqual(result["status"], "PRICED")
+        self.assertEqual(result["estimated_usd"], "0.001265000")
+        self.assertEqual(result["rates_per_million"]["output"], "0.50")
+        self.assertEqual(result["tokens"]["output_reasoning_subset"], 200)
+
+    def test_gpt6_luna_long_context_and_12h_write(self):
+        result = price_usage(chat(i=273000, cached=4000, writes=7000),
+                             model="gpt-6-luna")
+        self.assertEqual(result["context_band"], "long")
+        # 262000*.20 + 4000*.02 + 7000*.25 + 500*.75
+        self.assertEqual(result["estimated_usd"], "0.054605000")
+        usage = {
+            "input_tokens": 12000, "output_tokens": 500,
+            "input_tokens_details": {"cached_tokens": 4000, "cache_write_tokens": 7000,
+                "cache_write_tokens_details": {"ttl_30m_tokens": 3000, "ttl_12h_tokens": 4000}},
+        }
+        result = price_usage(usage, model="gpt-6-luna", api_style="responses", cache_ttl="12h")
+        # 1000*.1 + 4000*.01 + 3000*.125 + 4000*.25 + 500*.5
+        self.assertEqual(result["estimated_usd"], "0.001765000")
+
+    def test_nonexistent_luna_61_never_mapped_to_other_prices(self):
+        result = price_usage(chat(), model="gpt-6.1-luna")
+        self.assertEqual(result["status"], "UNKNOWN")
+        self.assertIsNone(result["estimated_usd"])
+
     def test_incomplete_response_duration_breakdown_unknown(self):
         usage = {
             "input_tokens": 12000, "output_tokens": 500,

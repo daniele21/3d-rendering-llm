@@ -104,6 +104,7 @@ class OpenAICompatibleCodeProvider:
             "schema_version": 1, "event": "started", "call_id": cid,
             "time_utc": utc_now(), "model_requested": self.model,
             "stage": os.environ.get("GEOMETRY_COST_STAGE", "blender_code_generation"),
+            "benchmark_task_id": os.environ.get("GEOMETRY_BENCHMARK_TASK_ID"),
             "source_sha": os.environ.get("SOURCE_SHA", os.environ.get("GITHUB_SHA", "unknown")),
             "github_run_id": os.environ.get("GITHUB_RUN_ID"),
             "backend": "openai_compatible_chat", "provider_host": urlparse(self.endpoint).hostname,
@@ -188,6 +189,7 @@ class OpenAICompatibleCodeProvider:
             append_event(ledger, {
                 "schema_version": 1, "event": "settled", "call_id": cid,
                 "time_utc": utc_now(), "model_requested": self.model,
+                "benchmark_task_id": os.environ.get("GEOMETRY_BENCHMARK_TASK_ID"),
                 "model_returned": actual_model, "provider_request_id": request_id,
                 "outcome": outcome, "duration_seconds": round(time.monotonic() - start, 5),
                 "pricing": pricing, "usage_observed": usage_observed,
