@@ -23,6 +23,7 @@ from geometry_harness.cli import blender_binary, png_dimensions, sha256, source_
 from geometry_harness.costs.ledger import default_ledger_path, load_events, reconcile
 from geometry_harness.providers.compatible import OpenAICompatibleCodeProvider, ProviderError
 from geometry_harness.strategies.bpy_subset import compile_bpy_subset, UnsafeGeneratedCode
+from geometry_harness.telemetry.spans import TraceRecorder, write_summary
 
 
 ROOT = Path(__file__).resolve().parent
@@ -108,6 +109,7 @@ def create_g1(root: Path, *, fixture_source: str | None = None) -> dict:
     logs = root / "logs"
     artifacts.mkdir()
     logs.mkdir()
+    tracer = TraceRecorder(root, source_sha=source_sha())
     started = time.monotonic()
     model_result = None
     status = "FAIL"
@@ -117,29 +119,35 @@ def create_g1(root: Path, *, fixture_source: str | None = None) -> dict:
             cost_path = default_ledger_path()
             if not cost_path.is_relative_to(root):
                 raise ShowcaseError("Live G1 cost ledger must be in the owned G1 artifact directory")
-            model_result = OpenAICompatibleCodeProvider.from_env().generate(PROMPT)
+            with tracer.span("llm.generate") as span:
+                model_result = OpenAICompatibleCodeProvider.from_env().generate(PROMPT)
+                span.cost_call_id = model_result.call_id
             raw_source = model_result.code
         else:
             raw_source = fixture_source
         (artifacts / "model-generated.py").write_text(raw_source, encoding="utf-8")
-        parts = compile_bpy_subset(raw_source)
+        with tracer.span("code.compile"):
+            parts = compile_bpy_subset(raw_source)
         (artifacts / "scene-spec.json").write_text(json.dumps(parts, indent=2) + "\n")
-        checks = _table_semantics(parts["objects"])
-        if any(x["status"] != "PASS" for x in checks):
-            raise ShowcaseError("Generated geometry fails table part/contact specification")
+        with tracer.span("geometry.validate"):
+            checks = _table_semantics(parts["objects"])
+            if any(x["status"] != "PASS" for x in checks):
+                raise ShowcaseError("Generated geometry fails table part/contact specification")
         binary = blender_binary()
         if not binary:
             raise ShowcaseError("Blender not installed on the target runner")
-        _safe_run([binary, "-b", "--factory-startup", "--python-exit-code", "14",
-                   "--python", str(BUILDER), "--",
-                   "--spec", str(artifacts / "scene-spec.json"),
-                   "--out", str(artifacts)], logs / "build.txt")
+        with tracer.span("blender.build"):
+            _safe_run([binary, "-b", "--factory-startup", "--python-exit-code", "14",
+                       "--python", str(BUILDER), "--",
+                       "--spec", str(artifacts / "scene-spec.json"),
+                       "--out", str(artifacts)], logs / "build.txt")
         if not (artifacts / "scene.blend").is_file():
             raise ShowcaseError("Trusted builder did not save native Blender scene")
-        _safe_run([binary, "-b", str(artifacts / "scene.blend"),
-                   "--python-exit-code", "14", "--python", str(INSPECT), "--",
-                   "--spec", str(artifacts / "scene-spec.json"),
-                   "--output", str(artifacts / "geometry.json")], logs / "inspect.txt")
+        with tracer.span("scene.reopen"):
+            _safe_run([binary, "-b", str(artifacts / "scene.blend"),
+                       "--python-exit-code", "14", "--python", str(INSPECT), "--",
+                       "--spec", str(artifacts / "scene-spec.json"),
+                       "--output", str(artifacts / "geometry.json")], logs / "inspect.txt")
         measured = json.loads((artifacts / "geometry.json").read_text())
         if not measured.get("passed"):
             raise ShowcaseError("Fresh-process geometric checks failed")
@@ -169,6 +177,7 @@ def create_g1(root: Path, *, fixture_source: str | None = None) -> dict:
         errors = [type(exc).__name__]  # sanitized failure class, no secrets or raw provider body
         checks = [{"name": "safe_g1_accepted", "status": "FAIL", "detail": errors[0]}]
     cost = _cost_summary(root)
+    performance = write_summary(root)
     if fixture_source is None:
         if cost is None or cost.get("grand_total_status") != "COMPLETE":
             status = "FAIL"
@@ -178,7 +187,8 @@ def create_g1(root: Path, *, fixture_source: str | None = None) -> dict:
                  "artifacts/scene.blend", "artifacts/preview.png",
                  "artifacts/geometry.json", "contact-sheet.png",
                  "index.html", "assertions.json", "costs/events.jsonl",
-                 "cost-summary.json", "logs/build.txt", "logs/inspect.txt")
+                 "cost-summary.json", "trace.jsonl", "performance-summary.json",
+                 "logs/build.txt", "logs/inspect.txt")
     items = [{"path": name, "sha256": sha256(root / name),
               "bytes": (root / name).stat().st_size}
              for name in available if (root / name).is_file()]
@@ -194,6 +204,8 @@ def create_g1(root: Path, *, fixture_source: str | None = None) -> dict:
                 "duration_seconds": round(time.monotonic() - started, 4),
                 "cost_usd_estimate": cost.get("priced_subtotal_usd") if cost else None,
                 "cost_status": cost.get("grand_total_status") if cost else "NOT_APPLICABLE",
+                "performance_status": performance["status"],
+                "observed_span_wall_ms": performance["observed_wall_ms"],
                 "checks": checks, "errors": errors, "artifacts": items}
     (root / "showcase-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     if status != "PASS":
