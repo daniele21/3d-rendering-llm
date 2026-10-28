@@ -59,6 +59,9 @@ if [[ -f pyproject.toml ]]; then
   GEOMETRY_SHAPE_FIXTURE_DIR="$PWD/ci-artifacts/showcase/glb-fixture" \
     python3 -m unittest discover -s tests/e2e -p 'test_native_glb_export.py' -v
   echo "BH-02 GLB export validated, no scorer scripts/AI executed."
+  GEOMETRY_ARCH_FIXTURE_DIR="$PWD/ci-artifacts/showcase/arch01-fixture" \
+    python3 -m unittest discover -s tests/e2e -p 'test_dxf_walls_blender.py' -v
+  echo "ARCH-01 bounded real DXF to native Blender geometry verified; zero model calls."
   echo "G0 verified on real Blender; outputs in ci-artifacts/showcase/g0."
   exit 0
 fi
