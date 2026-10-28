@@ -6,6 +6,26 @@ Single source of truth for milestone priority, dependencies, issue ownership, an
 Detailed contracts: [agent-performance](../features/agent-performance.md), [repair-policy](../features/repair-policy.md), [harness-efficiency-experiments](../features/harness-efficiency-experiments.md), [architecture-2d-to-3d](../features/architecture-2d-to-3d.md), [external integration](../features/external-integration-contract.md).
 Verified implementation truth is maintained **only** in [current-state](../current-state.md), using CI run IDs/SHAs and artifact inventories.
 
+## Luna six-scene evidence checkpoint — 2026-10-28
+
+The historical Luna 2/6 native scene baseline remains immutable. A separate
+name-only ablation recovered AquariumTank, ArmChair, and Bottle, giving 5/6
+counterfactual native scenes (not a production acceptance rate). The verified
+pinned scorer returned the following descriptive Chamfer CD results:
+AquariumTank 0.0492351973, ArmChair 0.0372074016, Bottle 0.0132779720,
+CoffeeTable 0.0441205912, Balloon 0.6380648867. BrainCoral remains missing.
+The five-scene conditional mean is 0.1563812097 and the dynamic-penalty
+mean is 0.2898338964; neither is a paired improvement against the historical
+two-scene cohort because the upstream scorer advances a shared RNG across
+scenes. Semantic fidelity remains unknown.
+
+Draft PR #66 contains the optional safe name normalizer, read-only evidence
+inspection and a new per-task RNG-isolated shape protocol. Its private
+operator-run gate is pending. Next gates are visual/semantic inspection of
+recovered shapes, diagnosis of Balloon's high CD, and separately authorized
+reasoning-budget evaluation for BrainCoral. See
+[observations and runbook](../features/g1-native-name-normalization-and-five-scene-scoring.md).
+
 ## North star, motivation, and scope
 
 Produce **reopenable, editable, objectively verifiable 3D scenes** with the fewest necessary model turns and tool round-trips, initially with an opt-in cloud baseline and ultimately with a **complete no-egress local inference** path on compatible Apple Silicon. Preserve the general text-to-3D product while adding a separate architecture-oriented structured 2D-to-3D journey. Do **not** pivot the core into a full CAD application.
