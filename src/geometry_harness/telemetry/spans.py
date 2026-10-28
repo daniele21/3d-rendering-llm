@@ -34,6 +34,7 @@ class TraceError(ValueError):
 class SpanLink:
     """Mutable stage annotation; only public cost-ledger call IDs allowed."""
     cost_call_id: str | None = None
+    span_id: str | None = None
 
 
 class TraceRecorder:
@@ -43,23 +44,30 @@ class TraceRecorder:
         self.run_id = run_id or uuid4().hex
         self.source_sha = source_sha
         self.trace_id = uuid4().hex
+        self._finished: set[str] = set()
 
     @contextmanager
-    def span(self, name: str, *, attempt: int = 1):
+    def span(self, name: str, *, attempt: int = 1,
+             depends_on: tuple[str, ...] = ()):
         if name not in _ALLOWED or type(attempt) is not int or not 1 <= attempt <= 100:
             raise TraceError("Unknown span name or attempt")
+        if not isinstance(depends_on, tuple) or len(depends_on) > 16 or len(set(depends_on)) != len(depends_on) or any(
+            not isinstance(dep, str) or dep not in self._finished for dep in depends_on
+        ):
+            raise TraceError("Dependencies must be distinct completed spans from this recorder")
         parent = _CURRENT.get()
         span_id = uuid4().hex
         start_ns = time.monotonic_ns()
         now = datetime.now(timezone.utc).isoformat()
         base = {"schema_version": 1, "run_id": self.run_id,
                 "trace_id": self.trace_id, "span_id": span_id,
-                "parent_span_id": parent, "name": name, "attempt": attempt,
+                "parent_span_id": parent, "depends_on": list(depends_on),
+                "name": name, "attempt": attempt,
                 "source_sha": self.source_sha}
         append_event(self.path, {**base, "event": "started",
                                  "utc": now, "monotonic_ns": start_ns})
         token = _CURRENT.set(span_id)
-        link = SpanLink()
+        link = SpanLink(span_id=span_id)
         outcome, error_class = "PASS", None
         try:
             yield link
@@ -76,6 +84,7 @@ class TraceRecorder:
                                      "error_class": error_class,
                                      "cost_call_id": link.cost_call_id,
                                      "elapsed_ms": round((stop_ns - start_ns) / 1e6, 4)})
+            self._finished.add(span_id)
 
 
 def _union_length(intervals: list[tuple[int, int]]) -> int:
@@ -154,6 +163,36 @@ def summarize(events: list[dict]) -> dict:
             "exclusive_ms": round(exclusive/1e6, 4),
         })
     rows.sort(key=lambda x: (intervals[x["span_id"]][0], x["span_id"]))
+    # Only explicit edges authorize a measured dependency chain. We do NOT
+    # infer dependencies from temporal proximity, sibling order or nesting.
+    dependencies = {}
+    for sid, state in spans.items():
+        declared = state["started"].get("depends_on", [])
+        if not isinstance(declared, list) or len(declared) > 16 or len(set(declared)) != len(declared):
+            raise TraceError("Invalid dependency list")
+        if sid not in intervals:
+            if declared:
+                unresolved.append(sid)
+            continue
+        for dep in declared:
+            if not isinstance(dep, str) or dep not in intervals:
+                raise TraceError("Unknown or unfinished dependency")
+            if intervals[dep][1] > intervals[sid][0]:
+                raise TraceError("Dependency was not finished before dependent started")
+        dependencies[sid] = declared
+    # Explicit edges must be a DAG; topological order comes from measured
+    # start timestamps, because each dependency has already finished.
+    best = {}
+    for sid in sorted(dependencies, key=lambda k: (intervals[k][0], k)):
+        previous = max((best[d] for d in dependencies[sid]), key=lambda x: x[0],
+                       default=(0, ()))
+        best[sid] = (previous[0] + intervals[sid][1] - intervals[sid][0],
+                     previous[1] + (sid,))
+    has_edges = any(dependencies.values())
+    chain = max(best.values(), key=lambda x: x[0], default=(0, ()))
+    chain_ids = list(chain[1]) if has_edges and not unresolved else []
+    by_sid = {r["span_id"]: r for r in rows}
+    critical_names = [by_sid[s]["name"] for s in chain_ids]
     observed_end = max(all_ends) if all_ends else min(all_starts)
     # Run wall-time is a monotonic interval, not the sum of overlapping spans.
     duration = max(0, observed_end - min(all_starts)) / 1e6
@@ -166,8 +205,17 @@ def summarize(events: list[dict]) -> dict:
             "FAIL" if any(r["status"] != "PASS" for r in rows) else "COMPLETE"),
         "observed_wall_ms": round(duration, 4),
         "root_coverage_ms": round(_union_length(root_intervals)/1e6, 4),
-        "critical_path": "UNKNOWN_WITHOUT_DEPENDENCY_EDGES",
-        "note": "Wall uses max(end)-min(start), never sum of overlapping spans; dependency DAG critical path not inferred.",
+        "critical_path": ("MEASURED_EXPLICIT_SPAN_DEPENDENCIES"
+                          if has_edges and not unresolved else
+                          "UNKNOWN_WITH_INCOMPLETE_EVENTS" if unresolved else
+                          "UNKNOWN_WITHOUT_DEPENDENCY_EDGES"),
+        "critical_chain_ms": (round(chain[0] / 1e6, 4)
+                              if chain_ids else None),
+        "critical_chain_span_ids": chain_ids,
+        "critical_chain_stages": critical_names,
+        "critical_chain_scope": ("EXPLICIT_INSTRUMENTED_STAGES_ONLY" if chain_ids
+                                 else "UNKNOWN"),
+        "note": "Observed root/wall includes gaps; explicit chain sums only declared dependencies, not total task latency or inferred sibling edges.",
         "span_count": len(spans), "unsettled_span_count": len(unresolved),
         "unsettled_span_ids": sorted(unresolved), "spans": rows,
     }
