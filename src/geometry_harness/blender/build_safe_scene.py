@@ -28,9 +28,19 @@ def build(spec_file: Path, out: Path):
     scene.unit_settings.scale_length = 1
     extents = []
     for index, part in enumerate(parts):
-        if part.get("kind") != "cube":
-            raise ValueError("Only verified cubes may be built")
-        bpy.ops.mesh.primitive_cube_add(size=1, location=part["location"])
+        kind = part.get("kind")
+        if kind == "cube":
+            bpy.ops.mesh.primitive_cube_add(size=1, location=part["location"])
+        elif kind == "cylinder":
+            bpy.ops.mesh.primitive_cylinder_add(
+                vertices=part["vertices"], radius=part["radius"],
+                depth=part["depth"], location=part["location"])
+        elif kind == "uv_sphere":
+            bpy.ops.mesh.primitive_uv_sphere_add(
+                segments=part["segments"], ring_count=part["ring_count"],
+                radius=part["radius"], location=part["location"])
+        else:
+            raise ValueError("Unsupported safe primitive type")
         obj = bpy.context.object
         obj.name = part["name"]
         obj["geometry_id"] = part["name"]
