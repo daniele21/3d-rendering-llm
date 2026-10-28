@@ -1,6 +1,6 @@
 # G1 model costs — audit and retention policy
 
-Status: token ledger and pricing validated on **two real GPT-6.1 Sol calls** as of 2026-10-28: first cost probe $0.014708000 (run 40668374405), first real Blender G1 $0.003666000 (run 40669515643). Combined recorded estimated model-token cost: **$0.018374000**. No official billing reconciliation yet. The source of truth for each request is a private JSONL append-only ledger, not an aggregate estimate.
+Status: token ledger and versioned model prices verified on **eight real API calls** as of 2026-10-28: two historical GPT-6.1 Sol calls ($0.014708000 and $0.003666000; subtotal **$0.018374000**) plus six GPT-6 Luna benchmark calls (**$0.004875300**). Combined recorded estimated model-token cost **$0.023249300**; NOT the provider invoice, GCS storage or Mac compute bill. First six-task Luna CI failed due benchmark-task failure accounting semantics, but its provider ledger is COMPLETE and private GCS upload step succeeded; the original run and failure are preserved. The source of truth for each request is a private JSONL append-only ledger, not an aggregate estimate.
 
 ## Per-call evidence
 Before outbound HTTP: durable started record (unique call ID, timestamp, model requested, stage, source SHA, GitHub run ID).
@@ -36,6 +36,15 @@ Prices are versioned in source and embedded per request, so future rate changes 
 https://developers.openai.com/api/docs/models/gpt-6.1-sol
 https://developers.openai.com/api/docs/guides/prompt-caching
 https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create
+
+## GPT-6 Luna price snapshot for NEW experiments (Standard/global, USD per 1M)
+
+| Context | Uncached input | Cache read | Cache write 30m | Cache write 12h | Output |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Up to 272K input | $0.10 | $0.01 | $0.125 | $0.25 | $0.50 |
+| Above 272K input | $0.20 | $0.02 | $0.25 | $0.50 | $0.75 |
+
+The exact documented API model is `gpt-6-luna`, NOT `gpt-6.1-luna`. Token prices are versioned as `openai-2026-10-28-standard-global-v2-sol-legacy-luna`, preserving historical Sol entries. See [first Luna benchmark](luna-benchmark-baseline.md) and official https://developers.openai.com/api/docs/pricing .
 
 ## Promotion gate
 Run automated unit tests and mock-transport ledger tests without paid calls; then enable isolated generated-code execution, a reviewed cost-bounded manual G1 job, mandatory cost-log upload and reconciliation. Treat the first actual model response as the first opportunity to validate provider usage fields; do not infer a cost from code-only tests.
