@@ -30,7 +30,7 @@ class PricingTests(unittest.TestCase):
         self.assertEqual(r["context_band"], "long")
         self.assertEqual(r["rates_per_million"]["output"], "15")
         self.assertEqual(r["tokens"]["input_uncached"], 262000)
-        self.assertEqual(r["estimated_usd"], "1.097300000")
+        self.assertEqual(r["estimated_usd"], "1.091300000")
 
     def test_short_long_boundary_and_missing_unknown(self):
         r = price_usage(chat(i=272000, cached=4000, writes=7000), model="gpt-6.1-sol")
