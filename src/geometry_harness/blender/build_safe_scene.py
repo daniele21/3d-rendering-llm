@@ -43,7 +43,7 @@ def build(spec_file: Path, out: Path):
         for axis in range(3):
             extents.append(abs(float(obj.location[axis])) + float(obj.dimensions[axis]) / 2)
     maximum_extent = max(extents)
-    center = Vector((
+    center = Vector(tuple(
         sum(float(p["location"][i]) for p in parts) / len(parts)
         for i in range(3)
     ))
