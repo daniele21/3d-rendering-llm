@@ -21,8 +21,9 @@ This is the **3d-rendering-llm application**, not the generic `repo-template-sw`
 4. Keep provider logic separate from geometry and rendering. Closed API experiments are opt-in, credential bounded and measurable. No API required for G0.
 5. Generated script execution is bounded and must not write outside owned work directories. Detect failure, keep diagnostic logs, clean owned child processes.
 6. Geometry invariants checked deterministically in a separate Blender session; visual score cannot replace geometric evidence.
-7. Do not commit run outputs, .blend, image products, AI model weights or secrets.
-8. Existing local Mac runners are scoped to private `local-runner-infra`; do not register new runners or put its labels into source workflow. Run only trusted exact commits.
+7. Every outbound paid model call, including retries and VLM judges, must pass through the per-call started/settled private cost ledger. Use the versioned model price card to record uncached, cached read, 30m/12h cache writes, output and reasoning subset; unknown usage/price is UNKNOWN, never $0. Mandatory private GCS log+summary proof before a G1 run is accepted. See docs/features/model-cost-observability.md.
+8. Do not commit run outputs, .blend, image products, AI model weights or secrets.
+9. Existing local Mac runners are scoped to private `local-runner-infra`; do not register new runners or put its labels into source workflow. Run only trusted exact commits.
 
 ## Development workflow
 
