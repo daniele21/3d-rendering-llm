@@ -92,7 +92,8 @@ def _archive_member_info(member: tarfile.TarInfo) -> tuple[str, str] | None:
 
 
 def verify_archive(archive: Path, source_root: Path, output: Path,
-                   *, remote_archive_verified: bool = False) -> dict:
+                   *, remote_archive_verified: bool = False,
+                   pinned_source_verified: bool = False) -> dict:
     archive, source_root, output = archive.resolve(), source_root.resolve(), output.resolve()
     if output.exists():
         raise ReferenceGateError("Refuse to overwrite scorer reference evidence")
@@ -108,61 +109,72 @@ def verify_archive(archive: Path, source_root: Path, output: Path,
             if len(contents) > TEXT_LIMIT or not contents:
                 raise ReferenceGateError("Invalid pinned prompt/factory size")
             original[(task, name)] = sha(contents)
-    found = {}
-    mesh_content = {}
-    archive_digest = hashlib.sha256()
-    # Stream gzip/large tar once: no extractall, no process execution, and
-    # no 1.95GB accumulation in RAM. Hash compressed bytes separately.
-    with archive.open("rb") as stream:
-        while block := stream.read(1024 * 1024):
-            archive_digest.update(block)
-    try:
-        with tarfile.open(archive, mode="r|gz") as tar:
-            for member in tar:
-                key = _archive_member_info(member)
-                if key is None:
-                    continue
-                if key in found:
-                    raise ReferenceGateError("Duplicate reference task member")
-                if not member.isfile() or member.size <= 0:
-                    raise ReferenceGateError("Reference member must be a nonempty regular file")
-                is_mesh = key[1].endswith(".glb")
-                if member.size > (MESH_LIMIT if is_mesh else TEXT_LIMIT):
-                    raise ReferenceGateError("Reference member too large")
-                file = tar.extractfile(member)
-                if file is None:
-                    raise ReferenceGateError("Archive member not readable")
-                with file:
-                    value = _stream_bytes(file, MESH_LIMIT if is_mesh else TEXT_LIMIT)
-                if len(value) != member.size:
-                    raise ReferenceGateError("Truncated reference member")
-                if is_mesh:
-                    if len(value) < 20 or value[:4] != b"glTF":
-                        raise ReferenceGateError("Invalid reference GLB header")
-                    mesh_content[key[0]] = value
-                elif sha(value) != original[key]:
-                    raise ReferenceGateError(
-                        "Public archive prompt/factory does not match frozen dataset: "
-                        + key[0] + "/" + key[1])
-                found[key] = {"sha256": sha(value), "bytes": len(value)}
-    except (tarfile.TarError, EOFError, OSError) as exc:
-        raise ReferenceGateError("Invalid/corrupt reference archive") from exc
-    required = {(task, name) for task in EXPECTED_IDS for name in expected_files(task)}
-    if set(found) != required or set(mesh_content) != set(EXPECTED_IDS):
-        raise ReferenceGateError("All six exact prompt+factory+mesh members required")
-    # Stage GLBs without reference factory or prompt texts, in scorer-only tree.
-    # Atomic rename only after *all* 18 text/code hashes match.
+
     with tempfile.TemporaryDirectory(dir=output.parent, prefix=".scorer-stage-") as temporary:
         root = Path(temporary)
+        found = {}
+        # Tar is processed sequentially; no extractall, no model/factory code
+        # is run, and at most one small chunk of an untrusted GLB is in RAM.
+        try:
+            with tarfile.open(archive, mode="r|gz") as tar:
+                for member in tar:
+                    key = _archive_member_info(member)
+                    if key is None:
+                        continue
+                    if key in found:
+                        raise ReferenceGateError("Duplicate reference task member")
+                    if not member.isfile() or member.size <= 0:
+                        raise ReferenceGateError("Reference member must be a nonempty regular file")
+                    is_mesh = key[1].endswith(".glb")
+                    if member.size > (MESH_LIMIT if is_mesh else TEXT_LIMIT):
+                        raise ReferenceGateError("Reference member too large")
+                    reader = tar.extractfile(member)
+                    if reader is None:
+                        raise ReferenceGateError("Archive member unreadable")
+                    with reader:
+                        if is_mesh:
+                            dest = root / key[0] / "glb" / key[1]
+                            dest.parent.mkdir(parents=True, exist_ok=True)
+                            digest = hashlib.sha256()
+                            count = 0
+                            header = b""
+                            with dest.open("xb") as stream:
+                                while chunk := reader.read(1024 * 1024):
+                                    if count + len(chunk) > MESH_LIMIT:
+                                        raise ReferenceGateError("GLB exceeds bounded stream size")
+                                    if not header:
+                                        header = chunk[:4]
+                                    digest.update(chunk)
+                                    stream.write(chunk)
+                                    count += len(chunk)
+                            if count != member.size or count < 20 or header != b"glTF":
+                                raise ReferenceGateError("Invalid/truncated GLB member")
+                            found[key] = {"sha256": digest.hexdigest(), "bytes": count}
+                        else:
+                            value = _stream_bytes(reader, TEXT_LIMIT)
+                            if len(value) != member.size:
+                                raise ReferenceGateError("Truncated prompt/reference factory")
+                            if sha(value) != original[key]:
+                                raise ReferenceGateError(
+                                    "Archive prompt/factory differs from supplied benchmark: "
+                                    + key[0] + "/" + key[1])
+                            found[key] = {"sha256": sha(value), "bytes": len(value)}
+        except (tarfile.TarError, EOFError, OSError) as exc:
+            raise ReferenceGateError("Corrupt or unreadable reference archive") from exc
+        required = {(task, name) for task in EXPECTED_IDS for name in expected_files(task)}
+        if set(found) != required:
+            raise ReferenceGateError("All six exact prompt+factory+mesh members required")
+        # Separate compressed archive hash: the 1.95GB file stays on disk.
+        archive_digest = hashlib.sha256()
+        with archive.open("rb") as stream:
+            while block := stream.read(1024 * 1024):
+                archive_digest.update(block)
         rows = []
         for task in EXPECTED_IDS:
-            dest = root / task / "glb" / f"{task}.glb"
-            dest.parent.mkdir(parents=True)
-            dest.write_bytes(mesh_content[task])
             rows.append({
                 "task_id": task,
-                "reference_glb_sha256": sha(mesh_content[task]),
-                "reference_glb_bytes": len(mesh_content[task]),
+                "reference_glb_sha256": found[(task, task + ".glb")]["sha256"],
+                "reference_glb_bytes": found[(task, task + ".glb")]["bytes"],
                 "prompt_description_sha256": original[(task, "prompt_description.txt")],
                 "prompt_instruction_sha256": original[(task, "prompt_instruction.txt")],
                 "factory_script_sha256": original[(task, task + ".py")],
@@ -177,14 +189,17 @@ def verify_archive(archive: Path, source_root: Path, output: Path,
             "archive_download_verified_at_pinned_revision": remote_archive_verified,
             "frozen_benchmark_repository": BENCHMARK_REPO,
             "frozen_benchmark_commit": BENCHMARK_SHA,
-            "status": "SIX_REFERENCE_PROMPTS_AND_SCRIPTS_MATCH_EXACT_BYTES",
-            "match_scope": "6/6 exact reference factory scripts and two prompts; GLB export geometry not certified",
+            "frozen_source_download_verified_at_pinned_revision": pinned_source_verified,
+            "status": ("SIX_REFERENCE_PROMPTS_AND_SCRIPTS_MATCH_PINNED_DATASET"
+                       if pinned_source_verified else "SIX_REFERENCES_MATCH_SUPPLIED_SOURCE_ONLY"),
+            "match_scope": "6/6 factory script bytes + description and instruction bytes; GLB geometry remains unverified",
             "model_calls": 0,
             "official_score": None,
             "blender_version_comparable": "NOT_VERIFIED",
             "refs": rows,
         }
         (root / "reference-provenance.json").write_text(json.dumps(report, indent=2) + "\n")
+        # Promotes a scorer-only directory only after all six identities match.
         os.replace(root, output)
     return report
 
@@ -210,7 +225,8 @@ def main(argv=None) -> int:
                 repo_id=ARCHIVE_REPO, repo_type="dataset",
                 revision=ARCHIVE_SHA, filename=ARCHIVE_FILENAME))
         result = verify_archive(archive, source, a.out,
-                                remote_archive_verified=a.download_archive)
+                                remote_archive_verified=a.download_archive,
+                                pinned_source_verified=a.source_root is None)
         print(json.dumps({
             "status": result["status"], "refs": len(result["refs"]),
             "archive_sha256": result["archive_sha256"],
