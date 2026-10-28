@@ -24,11 +24,29 @@ from geometry_harness.costs.ledger import default_ledger_path, load_events, reco
 from geometry_harness.providers.compatible import OpenAICompatibleCodeProvider, ProviderError
 from geometry_harness.strategies.bpy_subset import compile_bpy_subset, UnsafeGeneratedCode
 from geometry_harness.telemetry.spans import TraceRecorder, write_summary
+from geometry_harness.validation.issues import validate as validate_geometry
 
 
 ROOT = Path(__file__).resolve().parent
 BUILDER = ROOT / "blender" / "build_safe_scene.py"
 INSPECT = ROOT / "blender" / "inspect_safe_scene.py"
+RENDER_VIEWS = ROOT / "blender" / "render_validation_views.py"
+
+
+def table_validation_contract() -> dict:
+    """Independent stated table constraints, not model-chosen coordinates."""
+    reqs = []
+    for number in range(1, 5):
+        name = f"leg_{number}"
+        reqs.extend((
+            {"id": f"floor_{number}", "type": "floor_contact",
+             "object_id": name, "floor_z_m": 0.0, "tolerance_m": .05},
+            {"id": f"support_{number}", "type": "vertical_contact",
+             "support_id": name, "supported_id": "tabletop", "tolerance_m": .05},
+        ))
+    return {"schema_version": 1, "task_id": "internal_g1_table",
+            "units": "m", "requirements": reqs}
+
 PROMPT = """Create an editable wooden four-leg table in Blender 5 with exactly 5 mesh cubes.
 
 Output ONLY literal Python bpy statements in this constrained form, repeated 5 times:
@@ -151,11 +169,28 @@ def create_g1(root: Path, *, fixture_source: str | None = None) -> dict:
         measured = json.loads((artifacts / "geometry.json").read_text())
         if not measured.get("passed"):
             raise ShowcaseError("Fresh-process geometric checks failed")
+        # Evaluate the saved native scene against the *task* requirements
+        # rather than only the dimensions proposed by the model itself.
+        with tracer.span("geometry.validate"):
+            geometry_report = validate_geometry(measured, table_validation_contract())
+            (root / "geometry-issues.json").write_text(
+                json.dumps(geometry_report, indent=2) + "\n", encoding="utf-8")
+            if geometry_report["status"] != "PASS":
+                raise ShowcaseError("Native scene fails independent floor/support constraints")
+        with tracer.span("blender.render_preview"):
+            _safe_run([binary, "-b", str(artifacts / "scene.blend"),
+                       "--python-exit-code", "14", "--python", str(RENDER_VIEWS),
+                       "--", "--out", str(root / "views")], logs / "views.txt", limit=120)
+        view_manifest = json.loads((root / "views" / "views-manifest.json").read_text())
+        if {entry["view"] for entry in view_manifest["views"]} != {"front", "side", "top", "isometric"}:
+            raise ShowcaseError("Four required Blender views not generated")
         width, height = png_dimensions(artifacts / "preview.png")
         checks += [{"name": "real_blender_reopen_geometry", "status": "PASS"},
                    {"name": "rendered_png_dimensions", "status": "PASS",
                     "detail": f"{width}x{height}"},
-                   {"name": "generated_python_not_executed", "status": "PASS"}]
+                   {"name": "generated_python_not_executed", "status": "PASS"},
+                   {"name": "native_table_issues_pass", "status": "PASS"},
+                   {"name": "four_real_validation_views", "status": "PASS"}]
         if fixture_source is None and (model_result is None or
                                        model_result.pricing is None or
                                        model_result.pricing.get("status") != "PRICED"):
@@ -188,7 +223,9 @@ def create_g1(root: Path, *, fixture_source: str | None = None) -> dict:
                  "artifacts/geometry.json", "contact-sheet.png",
                  "index.html", "assertions.json", "costs/events.jsonl",
                  "cost-summary.json", "trace.jsonl", "performance-summary.json",
-                 "logs/build.txt", "logs/inspect.txt")
+                 "geometry-issues.json", "views/views-manifest.json",
+                 "views/front.png", "views/side.png", "views/top.png", "views/isometric.png",
+                 "logs/build.txt", "logs/inspect.txt", "logs/views.txt")
     items = [{"path": name, "sha256": sha256(root / name),
               "bytes": (root / name).stat().st_size}
              for name in available if (root / name).is_file()]
