@@ -23,7 +23,7 @@ The output folder must not already contain files (runs are immutable). Generated
 
 ## G1: first cost-audited AI-to-Blender smoke (restricted)
 
-The first GPT-6.1 Sol run generated a four-leg table as Blender bpy code on the Mac mini. The code was **never executed as Python**: a strict AST parser accepts only literal cube creation, names, dimensions, scale and location. An audited in-repo Blender builder converts the accepted data to an editable native scene; a fresh Blender process reopens and verifies it. Unsupported Python fails closed. This proves a **narrow 5-part internal demo**, NOT general procedural modeling or an official 3DCodeBench result.
+The first GPT-6.1 Sol run generated a four-leg table as Blender bpy code on the Mac mini. The code was **never executed as Python**: a strict AST parser accepts only bounded literal cubes, cylinders, UV spheres and named transforms (dimensions, scale, location). An audited in-repo Blender builder converts the accepted data to an editable native scene; a fresh Blender process reopens and verifies it. Unsupported Python fails closed. This proves a **narrow 5-part internal demo**, NOT general procedural modeling or an official 3DCodeBench result.
 
 - [First live AI-generated .blend and PNG + private GCS proof](https://github.com/daniele21/local-runner-infra/actions/runs/40669515643): PASS, model-token estimate **USD 0.003666000**
 - [First single-call cost/usage probe](https://github.com/daniele21/local-runner-infra/actions/runs/40668374405): PASS, **USD 0.014708000**
