@@ -36,7 +36,9 @@ jobs:
         run: python3 template/scripts/verify_docs.py --root template --template-mode
       - name: Verify template agent context
         run: python3 template/scripts/verify_agent_context.py --root template --template-mode
-      - name: Test context route accounting
+      - name: Test template and Geometry Harness unit contracts
+        env:
+          PYTHONPATH: src
         run: python3 -m unittest discover -s tests -v
       - name: Compile validation scripts
         run: python3 -m py_compile template/scripts/*.py

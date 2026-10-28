@@ -1,0 +1,19 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+runs/
+ci-artifacts/
+*.blend1
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Transient Workload Identity Federation credentials from GitHub Actions
+gha-creds-*.json

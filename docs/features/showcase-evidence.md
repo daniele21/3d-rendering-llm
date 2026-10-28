@@ -1,6 +1,6 @@
 # Milestone showcase and evidence contract
 
-Status: **planned contract**, not an implemented renderer or passing 3D E2E suite.
+Status: **enforced evidence contract**. G0 real Blender+GCS gates PASS; G1 first narrow internal AI-to-native-Blender E2E PASS on 2026-10-28 [run 40669515643](https://github.com/daniele21/local-runner-infra/actions/runs/40669515643). Real 3DCodeBench scoring and visual review still pending; G2–G8 remain planned.
 Owner: showcase/test infrastructure and milestone implementation owners.
 Read when: implementing a G0–G8 acceptance test, CI artifact publication or visual review.
 Execution ordering and current states remain in [the active workstream](../workstreams/geometry-harness.md).
@@ -10,6 +10,19 @@ Execution ordering and current states remain in [the active workstream](../works
 A passing unit test alone does not show the result of a 3D project. **Every milestone must have a real end-to-end (E2E) showcase test that generates and publishes a human-inspectable deliverable**, plus objective assertions and an intentionally failing/negative scenario. In the PR and CI artifacts a reviewer must be able to see what was generated, open the .blend where relevant, inspect change evidence, and distinguish a real model run from a replay or mocked test.
 
 Implement the minimal common evidence writer in G0, then **extend the same format** rather than inventing new report and storage conventions for later phases.
+
+## Revised sprint application (2026-10-27)
+
+The [active benchmark-driven plan](../workstreams/geometry-harness.md) reorders delivery, **not** evidence rigor:
+
+- G0/S0 still requires deterministic **real** Blender evidence and verified private GCS upload.
+- G1/S1 becomes the first **real AI + 3DCodeBench smoke task** showcase; seed a frozen baseline plus source/model/tool identities.
+- G5 benchmark tooling starts **in G1/S1** (6 smoke), expands in S2 (24 core) and releases (212 full) instead of waiting for G4. Every benchmark includes failures and cost/latency.
+- G2/S2–S4 adds actual orthographic + isometric views, objective geometry gates, blinded visual judge and bounded repair, each with negative-path evidence.
+- S3 planner and S5 generated-2D ablations are **separate A/B E2E acceptance slices** even though they are optional strategies, each producing native scene, image, manifest, paired report and failure path. No CADCraft dependency; 2D reference is measured against direct Blender.
+- Editing, local model and final Cycles retain G3–G8 real-E2E obligations; the gallery remains available from G0.
+
+**Detailed evaluation spec:** [benchmark-protocol.md](benchmark-protocol.md). Preserve the original G0–G8 test matrix below as per-capability mandatory gates; the sprint mapping dictates when they first become executable. Never use fake test PNGs, synthetic model calls or unscored/UNKNOWN outcomes as proof of a quality improvement.
 
 ## Required output of every milestone test
 
@@ -34,7 +47,7 @@ showcase/
 
 ### Planned commands and ownership
 
-At G0 introduce native `geometry showcase --milestone G0 --output ci-artifacts/showcase/g0`, `geometry showcase validate PATH`, and a fixture-driven E2E test. Names are *intended interfaces*, not functioning commands today. Each later milestone adds its case to the same runner. `geometry showcase --milestone Gx --open` should build/open the static gallery and optionally open the native .blend in Blender; no web hosting required.
+At G0 use implemented `python3 -m geometry_harness showcase --milestone G0 --output ci-artifacts/showcase/g0`, `python3 -m geometry_harness showcase validate PATH`, and fixture-driven E2E tests. The commands exist and G0 passed the dedicated Mac mini real Blender/GCS integration on run 40664644253. Final human visual review of the private render remains part of the full acceptance ritual. Each later milestone adds its case to the same runner. `geometry showcase --milestone Gx --open` should build/open the static gallery and optionally open the native .blend in Blender; no web hosting required.
 
 Expected test hierarchy: `tests/unit/` for manifest/writer/hashes, `tests/integration/` for Blender and MCP contracts, and `tests/e2e/test_showcase_gX.py` for the real representative user path. Add a negative case per milestone (same test file or companion) proving a distinct failure signal.
 
@@ -45,7 +58,7 @@ All test paths below are **planned** and become real when that milestone is impl
 | Milestone / planned E2E | Task and demonstrable outputs | Automatic assertions + negative case |
 | --- | --- | --- |
 | **G0** `test_showcase_g0.py` | Create four-leg table deterministically; `artifacts/scene.blend`, `artifacts/preview.png`, `contact-sheet.png`, manifest | Blender opens saved file; five stable named objects, known dimensions/contacts, valid PNG and no leaked processes. Negative: missing Blender binary or forced render timeout reports precise failure and cleans up. |
-| **G1** `test_showcase_g1.py` | Prompt creates table/chair with real closed AI; generated `artifacts/generate.py`, `scene.blend`, `preview.png`, prompt and usage metadata | Actual provider call recorded; produced script executes and saved scene reopens; requested parts present. Negative: invalid script/provider rejection becomes a bounded FAIL with source and logs, not empty output. |
+| **G1** `test_showcase_g1.py` (first internal narrow safe-AST smoke passed; official 3DCodeBench pending) | Prompt creates table/chair with real closed AI; generated `artifacts/generate.py`, `scene.blend`, `preview.png`, prompt and usage metadata | Actual provider call recorded; produced script executes and saved scene reopens; requested parts present. Negative: invalid script/provider rejection becomes a bounded FAIL with source and logs, not empty output. |
 | **G2** `test_showcase_g2.py` | Deliberately flawed geometry → multiview feedback/retry; `artifacts/views/{front,side,top,iso}.png`, `artifacts/before-after.png`, `artifacts/rounds.json`, checks and judge scores | Checks identify injected disconnected leg; initial and repaired revisions separately retained; final constraints checked, attempts bounded; report repair success/failure without fabricating it. Negative: exhausted retry budget returns FAIL, keeping last valid evidence. |
 | **G3** `test_showcase_g3.py` | Change only tabletop material using live dcc MCP; `artifacts/before.png`, `after.png`, `tool-actions.json`, edited `scene.blend` | Confirm MCP tool invocation, targeted material change, all unrelated transforms and names unchanged, saved scene reopens. Negative: unknown object/tool timeout makes no destructive partial commit. |
 | **G4** `test_showcase_g4.py` | Increase table width → replay in fresh Blender process → rollback; `artifacts/{original,edited,rolledback}.png`, `revisions.json`, `replay-diff.json`, native checkpoints | Replay produces semantically equivalent object geometry/materials; rollback restores baseline measured properties (do not require byte-identical .blend). Negative: corrupted journal/checkpoint triggers recovery without losing accepted revision. |
@@ -61,8 +74,8 @@ All test paths below are **planned** and become real when that milestone is impl
 - **Cloud experiments (G1/G2/G5):** workflow_dispatch/manual or explicitly authorized cost-bounded CI with provider secrets gated and unavailable to untrusted change branches. Not part of every push; no passing claim from a mocked provider.
 - **Local AI (G6/G7):** dedicated appropriately provisioned self-hosted Mac with locally cached models. Record peak memory, inference duration and verified offline evidence; do not treat ordinary hosted CPU job as representative.
 - **UI (G8):** screenshots plus continuous critical-journey video where required by the inherited product UI contract; CI artifacts preserve it.
-- **Publish:** the central Actions workflow uploads `ci-artifacts/showcase/` via `actions/upload-artifact@v4` even on a failed test, when files exist, with seven-day retention. Follow central run link from source `local-ci/mac` status and download `geometry-showcase-<run-id>`. This is not a source-repository artifact; no Git binary render commits.
-- **Retention:** Git retains small task fixtures/schema/tests; local or CI artifact store retains immutable run bundles temporarily; optional promoted reference examples may be published as versioned release assets after validation and provenance review.
+- **Publish:** central `geometry-mac-mini.yml` uses keyless GitHub OIDC federation to upload `ci-artifacts/showcase/` into **private GCS**, under `gs://BUCKET/geometry-harness/g0/SOURCE_SHA/GITHUB_RUN_ID-attempt-N/`. It uploads diagnostics even if Blender fails, but only passes G0 if real Blender tests succeed and the required GCS object paths are confirmed. No `actions/upload-artifact` dependency or Git binary render commits. Configure via `local-runner-infra/docs/geometry-gcs-artifacts.md`.
+- **Retention:** Git retains only small fixtures/schema/tests; private GCS retains immutable run bundles and their hashes. No automatic deletion until the team decides development vs milestone retention; use bucket lifecycle policies afterward. Optional promoted reference examples may be separately published after provenance review.
 - **Review ritual:** open `index.html` or `contact-sheet.png`, inspect renders visually, read objective checks, open `scene.blend` when needed, and compare to prior milestone. Automated success alone never attests to artistic quality.
 
 ## Milestone promotion rule
