@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "source": "YipengGao/3DCode",
+  "dataset_revision": "b70b4ee54b93fab76596da5809f3e71c617fa5c2",
+  "selection": "reviewed_public_category_names",
+  "smoke": [
+    "CoffeeTable_seed0",
+    "ArmChair_seed0",
+    "Bottle_seed0",
+    "AquariumTank_seed0",
+    "Balloon_seed0",
+    "BrainCoral_seed0"
+  ],
+  "notes": "Six published category IDs, deliberately contrasting furniture, container, appliance, inflatable and organic forms. The safe geometry subset is expected to FAIL some prompts; no fabricated scores. Full core 24 is provisional until independent category diversity review."
+}
