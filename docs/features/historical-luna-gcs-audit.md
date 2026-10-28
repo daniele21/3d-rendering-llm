@@ -1,6 +1,6 @@
 # Historical six-task Luna audit — operator-only retrieval
 
-**Status:** reproducible read-only audit helper implemented, but **NOT executed against GCS** here. The CI service account `geometry-g0-uploader@project-tests-498508.iam.gserviceaccount.com` has only bucket-scoped `roles/storage.objectCreator` (see `local-runner-infra/scripts/bootstrap_geometry_gcs.sh`). It has **no** `storage.objects.get` or `storage.objects.list`. Do not widen CI service-account IAM, publish bucket contents or copy provider secrets into Actions solely for the audit.
+**Status: operator-run private GCS read-only audit VERIFIED on 2026-10-28 (27/27 objects, six tasks, two accepted native scenes), official shape/image quality scoring NOT RUN.** The CI service account `geometry-g0-uploader@project-tests-498508.iam.gserviceaccount.com` has only bucket-scoped `roles/storage.objectCreator` (see `local-runner-infra/scripts/bootstrap_geometry_gcs.sh`). It has **no** `storage.objects.get` or `storage.objects.list`. Do not widen CI service-account IAM, publish bucket contents or copy provider secrets into Actions solely for the audit.
 
 ## With an already-authorized personal GCS reader
 
@@ -21,7 +21,30 @@ PYTHONPATH=src python3 -m geometry_harness.evaluation.historical_luna \
   --out ~/geometry-evidence/luna-six-local-review
 ```
 
-This **does not** trigger Luna or rerun 3DCodeBench. It verifies original SHA256, the exact six task IDs, ledger/cost consistency and native Blender pass artifacts; reports the original CI state as **INCOMPLETE**, keeping its cost ledger `COMPLETE`. Expected historic evidence from logs: six billed calls, 2/6 native scenes and estimated USD 0.004875300. These are **not new verified audit results** until a reader runs the tool.
+This **does not** trigger Luna or rerun 3DCodeBench. It verifies original SHA256, the exact six task IDs, ledger/cost consistency and native Blender pass artifacts; reports the original CI state as **INCOMPLETE**, keeping its cost ledger `COMPLETE`. The operator run on 2026-10-28 **verified** six billed call records, 2/6 accepted native scenes and estimated USD 0.004875300. The original CI remains `INCOMPLETE`; no retroactive successful benchmark is claimed.
+
+## Executed operator audit — 2026-10-28
+
+The operator's terminal output confirms a successful authenticated **read-only** GCS copy (27/27 objects, 2.9 MiB), followed by the local artifact auditor:
+```json
+{
+  "original_run_status": "INCOMPLETE",
+  "audit_status": "EVIDENCE_VERIFIED_NOT_UPSTREAM_SCORED",
+  "native_pass": 2,
+  "task_count": 6,
+  "estimated_model_usd": "0.004875300",
+  "quality_score": "UNKNOWN_UPSTREAM_NOT_RUN"
+}
+```
+Private local evidence directory: `~/geometry-evidence/luna-six-original/historical-evidence/`; private gallery: `~/geometry-evidence/luna-six-original/review/index.html`. These paths are on the authorized **operator's Mac**, not on a shared Mac mini or a public GitHub job. The 2 supported scenes have native `.blend` and preview evidence for `CoffeeTable_seed0` and `Balloon_seed0`; the other four task results remain in the six-task denominator. No model call was repeated.
+
+Next **local-only zero-model-cost** stage for the two accepted scene GLBs (requires Blender on the same Mac):
+```bash
+PYTHONPATH=src python3 -m geometry_harness.evaluation.upstream_shape_adapter \
+  --input ~/geometry-evidence/luna-six-original/historical-evidence \
+  --out ~/geometry-evidence/luna-six-shape-stage
+```
+This stage is distinct from official Chamfer scoring; the latter still needs six provenance-matched, scorer-only reference GLBs and a pinned compatible 3DCodeBench environment. Do not copy the operator's private evidence into this repository.
 
 ## Reference mesh sourcing decision
 
