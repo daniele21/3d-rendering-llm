@@ -35,6 +35,16 @@ class SafeDXFTests(unittest.TestCase):
             with self.subTest(first=bad[:120]),self.assertRaises(DXFReject):
                 compile_dxf(bad)
 
+    def test_unknown_or_missing_wall_layer_is_rejected(self):
+        original=FIXTURE.read_text()
+        for wrong in (original.replace("8\nWALLS","8\nFURNITURE",1),
+                      original.replace("8\nWALLS\n","",1),
+                      original.replace("8\nWALLS\n","8\nWALLS\n8\nWALLS\n",1)):
+            with self.subTest(wrong=wrong[:90]),self.assertRaises(DXFReject):
+                compile_dxf(wrong)
+        approved=compile_dxf(original.replace("8\nWALLS","8\nA-WALL"))
+        self.assertEqual(len(approved["objects"]),4)
+
     def test_no_guessing_units_and_scope(self):
         with self.assertRaises(DXFReject):
             compile_dxf(FIXTURE.read_text(),wall_height_m=80)
