@@ -111,6 +111,7 @@ class OpenAICompatibleCodeProvider:
         pricing = price_usage(None, model=self.model)
         actual_model = None
         request_id = None
+        usage_observed = None
         outcome = "FAILED_NO_USAGE"
         result = None
         try:
@@ -148,6 +149,17 @@ class OpenAICompatibleCodeProvider:
                 actual_model = payload.get("model")
                 request_id = payload.get("id")
                 usage = payload.get("usage")
+                # Preserve only numeric counters for later audits, never raw prompts.
+                if isinstance(usage, dict):
+                    prompt_detail = usage.get("prompt_tokens_details") or {}
+                    output_detail = usage.get("completion_tokens_details") or {}
+                    usage_observed = {
+                        "input_total": usage.get("prompt_tokens"),
+                        "input_cache_read": prompt_detail.get("cached_tokens") if isinstance(prompt_detail, dict) else None,
+                        "input_cache_write": prompt_detail.get("cache_write_tokens") if isinstance(prompt_detail, dict) else None,
+                        "output_total": usage.get("completion_tokens"),
+                        "output_reasoning_subset": output_detail.get("reasoning_tokens") if isinstance(output_detail, dict) else None,
+                    }
                 tier = payload.get("service_tier", "standard")
                 pricing = price_usage(
                     usage, model=actual_model if isinstance(actual_model, str) else "unreported",
@@ -159,12 +171,13 @@ class OpenAICompatibleCodeProvider:
                     outcome = "UNFINISHED_RESPONSE"
                     raise ProviderError("Model generation incomplete or refused")
                 message = choice["message"]["content"]
+                outcome = "INVALID_GENERATED_CODE"
                 code = _extract_code(message)
                 outcome = "COMPLETED" if pricing["status"] == "PRICED" else "COMPLETED_COST_UNKNOWN"
                 result = GeneratedCode(
                     model=self.model, code=code,
-                    input_tokens=pricing["tokens"]["input_total"] if pricing["tokens"] else None,
-                    output_tokens=pricing["tokens"]["output_total"] if pricing["tokens"] else None,
+                    input_tokens=(usage_observed or {}).get("input_total"),
+                    output_tokens=(usage_observed or {}).get("output_total"),
                     cost_usd=pricing["estimated_usd"], call_id=cid, pricing=pricing,
                 )
                 return result
@@ -177,5 +190,5 @@ class OpenAICompatibleCodeProvider:
                 "time_utc": utc_now(), "model_requested": self.model,
                 "model_returned": actual_model, "provider_request_id": request_id,
                 "outcome": outcome, "duration_seconds": round(time.monotonic() - start, 5),
-                "pricing": pricing,
+                "pricing": pricing, "usage_observed": usage_observed,
             })
