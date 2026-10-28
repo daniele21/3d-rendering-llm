@@ -159,8 +159,9 @@ def run(output: Path, public_root: Path, suite: Path) -> dict:
             code_path = task_out / "model-generated.py"
             code_path.write_text(output_code.code, encoding="utf-8")
             with trace.span("code.compile"):
-                plan = compile_bpy_subset(output_code.code)
+                plan = compile_bpy_subset(output_code.code, normalize_names=True)
             record["safe_source"] = "PASS"
+            record["normalized_mesh_names"] = plan["name_normalization"]["changes"]
             _write(task_out / "scene-spec.json", plan)
             with trace.span("blender.build"):
                 _safe_run([binary, "-b", "--factory-startup", "--python-exit-code", "14",
