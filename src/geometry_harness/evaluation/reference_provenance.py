@@ -16,6 +16,7 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import shutil
+import struct
 import tarfile
 import tempfile
 
@@ -94,6 +95,8 @@ def _archive_member_info(member: tarfile.TarInfo) -> tuple[str, str] | None:
 def verify_archive(archive: Path, source_root: Path, output: Path,
                    *, remote_archive_verified: bool = False,
                    pinned_source_verified: bool = False) -> dict:
+    if Path(archive).is_symlink() or Path(source_root).is_symlink():
+        raise ReferenceGateError("Symlinked source/archive rejected")
     archive, source_root, output = archive.resolve(), source_root.resolve(), output.resolve()
     if output.exists():
         raise ReferenceGateError("Refuse to overwrite scorer reference evidence")
@@ -142,13 +145,15 @@ def verify_archive(archive: Path, source_root: Path, output: Path,
                                 while chunk := reader.read(1024 * 1024):
                                     if count + len(chunk) > MESH_LIMIT:
                                         raise ReferenceGateError("GLB exceeds bounded stream size")
-                                    if not header:
-                                        header = chunk[:4]
+                                    if len(header) < 12:
+                                        header = (header + chunk)[:12]
                                     digest.update(chunk)
                                     stream.write(chunk)
                                     count += len(chunk)
-                            if count != member.size or count < 20 or header != b"glTF":
-                                raise ReferenceGateError("Invalid/truncated GLB member")
+                            if (count != member.size or count < 20 or len(header) != 12
+                                or header[:4] != b"glTF"
+                                or struct.unpack("<II", header[4:12]) != (2, count)):
+                                raise ReferenceGateError("Invalid/truncated GLB v2 header")
                             found[key] = {"sha256": digest.hexdigest(), "bytes": count}
                         else:
                             value = _stream_bytes(reader, TEXT_LIMIT)
