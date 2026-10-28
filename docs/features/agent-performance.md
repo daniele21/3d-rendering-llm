@@ -2,6 +2,14 @@
 
 Status: **G1 STAGE TRACE + EXPLICIT DEPENDENCY CHAIN IMPLEMENTED, REAL MAC PASS; full run critical DAG OPEN** · 2026-10-28. Per-stage JSONL and cost-call links were integrated in #41; explicit predecessor validated and tested on native Blender [run 40697522356](https://github.com/daniele21/local-runner-infra/actions/runs/40697522356) in #46. Span chain excludes uninstrumented queue/wait/dependencies; it is not a total causal wall-time analysis. Owner: `src/geometry_harness/telemetry/`. Roadmap: [active workstream](../workstreams/geometry-harness.md). Source cost ledger: [model-cost-observability](model-cost-observability.md).
 
+## Wave 3 observable output
+
+[PR #52](https://github.com/daniele21/3d-rendering-llm/pull/52) adds a read-only `telemetry.review` tool and automatically generates `trace-review.json` + `timeline.html` inside every native G1 scene bundle. The timeline includes only instrumented monotonic spans with strict output filtering. Missing paid-call IDs, missing ledgers and incomplete priced calls are `UNKNOWN`, not zero. Offline negative tests and real Mac [run 40701519157](https://github.com/daniele21/local-runner-infra/actions/runs/40701519157) PASS. Real provider queue/wall critical path and remote LLM per-call timing attribution remain open.
+
+```bash
+PYTHONPATH=src python3 -m geometry_harness.telemetry.review --root /private/G1-RUN --out /private/G1-TIMELINE-REVIEW
+```
+
 ## Why / scope
 
 Understand a complete 3D task's wall time before optimising it. The partner's ~26 min with ~22 min AI retouch is an *unverified anecdotal baseline*. No assumption that the delay is caused by back-and-forth rather than model latency, queue/agent CLI, repeated scene builds, GPU contention or visual rendering. Trace real run structure first.
