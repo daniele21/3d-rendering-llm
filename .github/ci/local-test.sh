@@ -53,6 +53,9 @@ if [[ -f pyproject.toml ]]; then
   GEOMETRY_VAL_FIXTURE_DIR="$PWD/ci-artifacts/showcase/val-fixture" \
     python3 -m unittest discover -s tests/e2e -p 'test_validation_real_blender.py' -v
   echo "VAL-01 four-view real Blender + typed geometry tests verified."
+  GEOMETRY_SHAPE_FIXTURE_DIR="$PWD/ci-artifacts/showcase/glb-fixture" \
+    python3 -m unittest discover -s tests/e2e -p 'test_native_glb_export.py' -v
+  echo "BH-02 trusted native GLB exporter verified without scorer references or paid AI."
   echo "G0 verified on real Blender; outputs in ci-artifacts/showcase/g0."
   exit 0
 fi
