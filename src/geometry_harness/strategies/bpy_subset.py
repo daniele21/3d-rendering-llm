@@ -10,6 +10,8 @@ import ast
 import math
 import re
 
+from geometry_harness.strategies.native_names import normalize_object_names, UnsafeMeshName
+
 
 class UnsafeGeneratedCode(ValueError):
     pass
@@ -68,8 +70,8 @@ def _vec(value, label, *, positive=False):
     return out
 
 
-def compile_bpy_subset(source: str) -> dict:
-    """Accept only sequential literal bpy cube operations.
+def compile_bpy_subset(source: str, *, normalize_names: bool = False) -> dict:
+    """Accept only sequential literal bpy primitive operations.
 
     Supported form:
       import bpy
@@ -151,7 +153,7 @@ def compile_bpy_subset(source: str) -> dict:
                 raise UnsafeGeneratedCode("Unapproved cube attribute")
             literal = _literal(statement.value)
             if target.attr == "name":
-                if not isinstance(literal, str) or not _NAME.fullmatch(literal):
+                if not isinstance(literal, str) or (not normalize_names and not _NAME.fullmatch(literal)):
                     raise UnsafeGeneratedCode("Invalid or unsafe geometry name")
                 current["name"] = literal
             elif target.attr == "dimensions":
@@ -171,5 +173,11 @@ def compile_bpy_subset(source: str) -> dict:
     names = [obj["name"] for obj in objects]
     if len(names) != len(set(names)):
         raise UnsafeGeneratedCode("Duplicate mesh names")
+    metadata = {}
+    if normalize_names:
+        try:
+            metadata["name_normalization"] = normalize_object_names(objects)
+        except UnsafeMeshName as exc:
+            raise UnsafeGeneratedCode(str(exc)) from None
     return {"schema_version": 1, "parser": "safe_literal_bpy_cube_v1",
-            "objects": objects, "source_execution": False}
+            "objects": objects, "source_execution": False, **metadata}
