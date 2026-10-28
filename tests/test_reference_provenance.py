@@ -33,7 +33,8 @@ def fixture(base: Path, *, change=None, omit=None, symlink=None):
                     continue
                 if (task,name)==change:
                     data+=b"mismatch"
-                key=f"3dcodebench_v1/data/{task}/{name}"
+                key=(f"3dcodebench_v1/data/{task}/glb/{name}" if name.endswith(".glb")
+                     else f"3dcodebench_v1/data/{task}/{name}")
                 info=tarfile.TarInfo(key)
                 if (task,name)==symlink:
                     info.type=tarfile.SYMTYPE
