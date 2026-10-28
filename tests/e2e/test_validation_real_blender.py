@@ -8,7 +8,17 @@ import unittest
 from geometry_harness.cli import blender_binary
 from geometry_harness.g1 import _safe_run, create_g1
 from geometry_harness.validation.issues import validate
-from test_validation_issues import contract
+def contract():
+    return {"schema_version": 1, "task_id": "synthetic_table", "units": "m",
+            "requirements": [
+                {"id": "top", "type": "dimensions", "object_id": "tabletop",
+                 "expected_dimensions_m": [2, 1, .08], "tolerance_m": .01},
+                {"id": "floor", "type": "floor_contact", "object_id": "leg_1",
+                 "floor_z_m": 0, "tolerance_m": .02},
+                {"id": "contact", "type": "vertical_contact", "support_id": "leg_1",
+                 "supported_id": "tabletop", "tolerance_m": .02}
+            ]}
+
 
 FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "g1_safe_table.py"
 SCRIPT = Path(__file__).resolve().parents[2] / "src" / "geometry_harness" / "blender" / "render_validation_views.py"
