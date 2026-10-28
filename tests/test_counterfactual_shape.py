@@ -38,7 +38,7 @@ class CounterfactualScoringTests(unittest.TestCase):
                 row.update(status="NO_GEN_GLB", cd=None, cd_yawmin=None)
         self.assertTrue(_paired_metrics(metrics(), original))
         self.assertFalse(_paired_metrics(metrics(changed=True), original))
-        self.assertFalse(_paired_metrics(missing=True), original))
+        self.assertFalse(_paired_metrics(metrics(missing=True), original))
         self.assertFalse(_paired_metrics({**metrics(), "n_ok": 2}, original))
         self.assertFalse(_paired_metrics({**metrics(), "per_instance": []}, original))
 
