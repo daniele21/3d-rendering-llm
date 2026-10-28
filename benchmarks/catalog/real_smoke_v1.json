@@ -11,5 +11,6 @@
     "Balloon_seed0",
     "BrainCoral_seed0"
   ],
-  "notes": "Six published category IDs, deliberately contrasting furniture, container, appliance, inflatable and organic forms. The safe geometry subset is expected to FAIL some prompts; no fabricated scores. Full core 24 is provisional until independent category diversity review."
+  "notes": "Six published category IDs, deliberately contrasting furniture, container, appliance, inflatable and organic forms. The safe geometry subset is expected to FAIL some prompts; no fabricated scores. Full core 24 is provisional until independent category diversity review.",
+  "expected_suite_sha256": "79904d4e83e9075cd08337a99c28d5dbcc00743cc790d37123ed9b7c776a7cd8"
 }
