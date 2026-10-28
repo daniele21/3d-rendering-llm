@@ -172,19 +172,104 @@ def _paired_metrics(metrics: dict, original_metrics: dict) -> bool:
             and metrics.get("n_instances") == 6 and metrics.get("n_ok") == 5)
 
 
+def _precheck_scorer(upstream: Path, refs: Path) -> None:
+    """Fail before building any output when operator paths are clearly wrong."""
+    script = upstream / "metrics" / "shape_chamfer.py"
+    if not script.is_file() or script.is_symlink():
+        raise ShapeGateError(
+            f"Pinned scorer not found: {script}. Locate shape_chamfer.py on the "
+            "operator Mac, then pass the parent of metrics/ as --upstream.")
+    manifest = refs / "reference-provenance.json"
+    if not manifest.is_file() or manifest.is_symlink():
+        raise ShapeGateError(
+            f"Scorer reference-provenance.json not found: {manifest}. "
+            "Use the same six verified reference meshes as the original scoring.")
+
+
+def _validate_resumable_stage(output: Path, historical: dict,
+                              originals: dict, converted: dict) -> dict:
+    """Allow a previously *completed* export stage, never partial/tampered files.
+
+    The operator must still provide the immutable original and native evidence,
+    which are fully re-audited before we accept any staged candidate GLB.
+    """
+    if not output.is_dir() or (output / "counterfactual-shape-results.json").exists():
+        raise ShapeGateError("Resume requires an existing unscored derived stage")
+    if ((output / "shape-scorer-provenance.json").exists()
+            or (output / "results" / "text_to_3D" / MODEL / "_metrics" /
+                "shape_chamfer.json").exists()):
+        raise ShapeGateError("Existing scorer output needs manual review; refusing to overwrite")
+    stage = _read(output / "scorer-staging.json", output)
+    if (stage.get("schema_version") != 1 or stage.get("experiment") != EXPERIMENT
+            or stage.get("model") != MODEL or stage.get("upstream_commit") != UPSTREAM_COMMIT
+            or stage.get("dataset_revision") != historical["dataset_revision"]
+            or stage.get("source_sha") != historical["source_sha"]
+            or stage.get("source_cost_estimated_usd") != historical["model_estimated_usd"]
+            or stage.get("original_run_status") != historical["original_run_status"]
+            or stage.get("original_native_pass") != 2 or stage.get("native_pass") != 5
+            or stage.get("expected_tasks") != list(EXPECTED_IDS)
+            or stage.get("model_calls") != 0
+            or stage.get("quality_status") != "UNKNOWN_NOT_SHAPE_SCORED"):
+        raise ShapeGateError("Existing staging provenance does not match original six tasks")
+    rows = stage.get("tasks")
+    if not isinstance(rows, list) or [x.get("task_id") for x in rows] != list(EXPECTED_IDS):
+        raise ShapeGateError("Resume staging must retain six ordered task records")
+    for row in rows:
+        task = row["task_id"]
+        meta = row.get("generated_glb")
+        if task == "BrainCoral_seed0":
+            if meta is not None or row.get("native_scene") != "FAIL":
+                raise ShapeGateError("BrainCoral must remain unscored in the counterfactual")
+            continue
+        if (row.get("native_scene") != "PASS"
+                or row.get("shape_status") != "READY_FOR_ISOLATED_REFERENCE_SCORER"
+                or not isinstance(meta, dict)):
+            raise ShapeGateError(f"Derived GLB not ready for scoring: {task}")
+        expected_rel = f"results/text_to_3D/{MODEL}/{task}/glb/{task}.glb"
+        if meta.get("path") != expected_rel:
+            raise ShapeGateError("Staged task GLB path changed")
+        glb = _verify_file(output, meta)
+        if glb.read_bytes()[:4] != b"glTF":
+            raise ShapeGateError("Invalid staged GLB header")
+        if task in originals:
+            if _sha(glb) != _sha(originals[task]):
+                raise ShapeGateError("Original generated GLB no longer byte-identical")
+            if row.get("source_cohort") != "original":
+                raise ShapeGateError("Original scene cohort changed")
+        elif task in converted:
+            if row.get("source_cohort") != "name_only_derived":
+                raise ShapeGateError("Derived scene cohort changed")
+            expected = _read(output / "results" / "text_to_3D" / MODEL /
+                             task / "expected.json", output)
+            if expected != {"object_ids": converted[task][1]}:
+                raise ShapeGateError("Derived GLB export expected IDs altered")
+            _file(output, f"results/text_to_3D/{MODEL}/{task}/export.log")
+        else:
+            raise ShapeGateError("Unsupported GLB cohort in staging")
+    return stage
+
+
 def run(original: Path, baseline: Path, derived: Path, output: Path, *,
         upstream: Path | None = None, refs: Path | None = None,
-        binary: str | None = None) -> dict:
+        binary: str | None = None, resume: bool = False) -> dict:
     original, baseline, derived, output = (x.expanduser().resolve() for x in (original, baseline, derived, output))
-    if output.exists():
-        raise ShapeGateError("New evidence directory required: never overwrite originals")
     if (upstream is None) != (refs is None):
         raise ShapeGateError("Pinned scorer and scorer-private references must be provided together")
+    if resume and upstream is None:
+        raise ShapeGateError("Resume requires --upstream and --refs to finish scoring")
+    if not resume and output.exists():
+        raise ShapeGateError("New evidence directory required: never overwrite originals")
+    if upstream is not None:
+        upstream, refs = upstream.expanduser().resolve(), refs.expanduser().resolve()
+        _precheck_scorer(upstream, refs)
     historical, provenance, old_metrics, originals, converted = _preflight(original, baseline, derived)
+    base = output / "results" / "text_to_3D" / MODEL
+    if resume:
+        _validate_resumable_stage(output, historical, originals, converted)
+        return _complete_scoring(output, upstream, refs, provenance, old_metrics)
     executable = binary or blender_binary()
     if not executable:
         raise ShapeGateError("Real Blender required for the three trusted GLB exports")
-    base = output / "results" / "text_to_3D" / MODEL
     output.mkdir(parents=True, mode=0o700)
     rows = []
     for task in EXPECTED_IDS:
@@ -229,6 +314,13 @@ def run(original: Path, baseline: Path, derived: Path, output: Path, *,
     _write(output / "scorer-staging.json", staging)
     if upstream is None:
         return staging
+    return _complete_scoring(output, upstream, refs, provenance, old_metrics)
+
+
+def _complete_scoring(output: Path, upstream: Path, refs: Path,
+                      provenance: dict, old_metrics: dict) -> dict:
+    """Pin and run the scorer, then claim quality only on a paired match."""
+    base = output / "results" / "text_to_3D" / MODEL
     score(output, upstream, refs)
     latest = _read(output / "shape-scorer-provenance.json", output)
     metric_path = base / "_metrics" / "shape_chamfer.json"
@@ -266,10 +358,12 @@ def main(argv=None) -> int:
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--upstream", type=Path)
     p.add_argument("--refs", type=Path)
+    p.add_argument("--resume", action="store_true",
+                   help="Finish an immutable, already-exported five-scene stage after a missing scorer path")
     a = p.parse_args(argv)
     try:
         result = run(a.original, a.baseline_stage, a.derived, a.out,
-                     upstream=a.upstream, refs=a.refs)
+                     upstream=a.upstream, refs=a.refs, resume=a.resume)
     except (ShapeGateError, OSError, ValueError, KeyError, TypeError) as exc:
         print(f"Counterfactual shape scoring rejected: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 2
