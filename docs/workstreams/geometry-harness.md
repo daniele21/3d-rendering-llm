@@ -39,8 +39,8 @@ Milestones are **acceptance gates**, not a prohibition on parallel isolated impl
 | --- | --- | --- | --- |
 | **S0/G0** | Real deterministic Blender + reopened .blend/PNG/gallery/manifest/GCS | Exact Mac mini CI, negative cases | **PASS technical** |
 | **S1/G1** | Real cloud LLM → safe Blender scene, six real smoke tasks with valid upstream-comparable scorer and frozen artifacts; time/cost tracing on the same runs | S0; benchmark rights/version and approved inference | **PARTIAL**: internal smoke PASS, official benchmark OPEN |
-| **S1T/PERF-01** | Hierarchical span trace/critical path + per-stage latency, linked to existing immutable cost ledger; visual run timeline | Real G0/G1 fixtures; no new paid call for routine checks | **PLANNED P0** |
-| **S2/VAL-01** | Deterministic PASS/FAIL/UNKNOWN geometry findings with affected object IDs, multi-view preview and one controlled injected defect | Frozen scene identity + real Blender | **PLANNED P0** |
+| **S1T/PERF-01** | Hierarchical stage spans and per-stage latency, linked to immutable cost ledger; dependency critical path and visual timeline remaining | Real G0/G1 fixtures; no new paid call for routine checks | **PARTIAL: narrow E2E PASS, DAG critical path OPEN** |
+| **S2/VAL-01** | Typed deterministic PASS/FAIL/UNKNOWN with affected IDs, four native Blender views and injected dimension/contact errors | Frozen scene identity + real Blender | **PARTIAL: narrow table E2E PASS; generality OPEN** |
 | **S3/EX-01** | Direct vs bounded typed planner: paired scenes, geometric acceptance and end-to-end time/cost | S1 quality suite + stable TaskSpec/metrics | **PLANNED P1** |
 | **S4/REPAIR-01** | Scoped typed patch vs full-regeneration baseline, immutable checkpoints, new-process replay/rollback, no unintended delta | S2 validator + revision contract; measured trials | **PLANNED P0** |
 | **S4P/ORCH-01** | Adaptive bounded repair policy including cheap-first, repeat-signature handling and skip/stop decisions; A/B | PERF-01 + REPAIR-01 + paired baseline | **PLANNED P1** |
@@ -53,6 +53,14 @@ Milestones are **acceptance gates**, not a prohibition on parallel isolated impl
 | **S8/INT-01** | Partner-independent integration contract then private opt-in connector PoC, with actual partner baseline and agreed terms | NDA + code audit + customer consent + accepted core slices | **DISCOVERY/BLOCKED externally** |
 
 **Execution order for value:** baseline + tracing → cheap validator → typed revision/scoped repair → adaptive repair/meta-tools if measured → local vs cloud and structured-CAD vertical → partner integration after discovery. A local provider probe and synthetic DXF fixture may begin in parallel, but no claims of comparative improvement until the appropriate baseline exists.
+
+### Wave 1 implementation checkpoint (2026-10-28)
+
+- **#41 PERF-01:** event spans started/finished with fail-closed incomplete traces and cost ledger ID links; G1 + six-task Luna smoke stage instrumentation merged. Safe monotonic overlap-aware wall/exclusive durations and hashed private GCS evidence PASS on Mac. **DAG critical path, complete total-run root interval, resource counters and visual timeline are NOT DONE.**
+- **#42 VAL-01:** task-contract-aware dimensions/floor/support findings and read-only real Blender front/side/top/isometric views merged, with actual Mac validation. **Not a generalized semantic judge.**
+- **#43 BH-02:** read-only six-task Luna artifact audit and cost-ledger re-reconciliation, SHA checks, failure-inclusive gallery, offline tests PASS. **Actual private historical bundle has not been reviewed with this new tool; official upstream scorer still OPEN.**
+- **#44 G1 integrator:** the real native table fixture automatically generates an 8-contact geometry report and four views, with traces and hash manifest. Mac run 40691475882 PASS, GCS 77 uploaded objects. First integration test failure 40691165626 remains historical evidence; replay fixed by using a new output directory. **No additional Luna calls made.**
+- New development should branch from current main. Next priority: reconcile actual run traces/cost IDs, pinned official 3DCodeBench 5.0 scorer and reference-only environment, then typed-scoped repair/checkpoints. Do not turn the six-task 2/6 native acceptance into an official visual quality claim.
 
 ## Work packages: tasks, deliverables, negative paths, ownership
 
