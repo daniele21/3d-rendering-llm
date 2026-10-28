@@ -215,5 +215,79 @@ class CounterfactualScoringTests(unittest.TestCase):
             with self.assertRaisesRegex(ShapeGateError, "SHA/size mismatch"):
                 _validate_resumable_stage(out, historical, originals, derived)
 
+    def test_readonly_diagnostics_accepts_descriptive_unpaired_when_frozen(self):
+        from types import SimpleNamespace
+        import hashlib
+        from geometry_harness.evaluation.counterfactual_shape import diagnose_existing
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            upstream, refs, out = (root/p for p in ("upstream", "refs", "out"))
+            (upstream/"metrics").mkdir(parents=True)
+            refs.mkdir()
+            out.mkdir()
+            script = b"# pinned third party script\\n"
+            (upstream/"metrics"/"shape_chamfer.py").write_bytes(script)
+            (refs/"reference-provenance.json").write_text("{}")
+            previous_refs = []
+            ref_manifest = []
+            for task in EXPECTED_IDS:
+                mesh = refs/task/"glb"/f"{task}.glb"
+                mesh.parent.mkdir(parents=True)
+                mesh.write_bytes(b"glTF" + task.encode())
+                sha = hashlib.sha256(mesh.read_bytes()).hexdigest()
+                previous_refs.append({"task_id": task, "sha256": sha})
+                ref_manifest.append({"task_id": task, "reference_glb_sha256": sha,
+                                     "reference_glb_bytes": mesh.stat().st_size})
+            (refs/"reference-provenance.json").write_text(json.dumps({"refs":ref_manifest}))
+            baseline = metrics()
+            for row in baseline["per_instance"]:
+                if row["instance"] not in ORIGINAL_VALID:
+                    row.update(status="NO_GEN_GLB", cd=None, cd_yawmin=None)
+            baseline["n_ok"] = 2
+            new = metrics(changed=True)
+            (out/"results"/"text_to_3D"/"gpt-6-luna"/"_metrics").mkdir(parents=True)
+            target = out/"results"/"text_to_3D"/"gpt-6-luna"/"_metrics"/"shape_chamfer.json"
+            target.write_text(json.dumps(new))
+            provenance = {"upstream_commit":UPSTREAM_COMMIT,
+                          "dataset_revision":"frozen-dataset",
+                          "upstream_shape_scorer_sha256":hashlib.sha256(script).hexdigest(),
+                          "reference_glb_sha256":previous_refs}
+            (out/"shape-scorer-provenance.json").write_text(json.dumps(provenance))
+            def fake_git(cmd, **kwargs):
+                if "rev-parse" in cmd:
+                    return SimpleNamespace(stdout=UPSTREAM_COMMIT)
+                return SimpleNamespace(stdout=script)
+            original = {"dataset_revision":"frozen-dataset"}
+            with patch("geometry_harness.evaluation.counterfactual_shape._preflight",
+                       return_value=(original,provenance,baseline,{},{})), patch(
+                       "geometry_harness.evaluation.counterfactual_shape._validate_resumable_stage") as stage, patch(
+                       "geometry_harness.evaluation.counterfactual_shape.subprocess.run",
+                       side_effect=fake_git, create=True) as git:
+                # subprocess is imported in the function; patch the module it resolves.
+                from unittest.mock import patch as p
+                with p("subprocess.run", side_effect=fake_git):
+                    diagnostic = diagnose_existing(root, root, root, out, upstream, refs)
+            self.assertEqual(diagnostic["shape_status"],"DESCRIPTIVE_5_SCENES_NOT_PAIRED")
+            self.assertEqual(diagnostic["n_scored"],5)
+            self.assertTrue(diagnostic["frozen_references_match"])
+            self.assertTrue(diagnostic["frozen_scorer_matches"])
+            self.assertFalse(diagnostic["original_pair_exact_scores_reproduce"])
+            self.assertEqual(len(diagnostic["per_instance"]),6)
+            stage.assert_called_once()
+            self.assertTrue(stage.call_args.kwargs["allow_scored_readonly"])
+
+    def test_diagnosis_exposes_no_scored_claim_with_bad_references(self):
+        from geometry_harness.evaluation.counterfactual_shape import diagnose_existing
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td)
+            (root/"metrics").mkdir()
+            (root/"metrics"/"shape_chamfer.py").write_text("# trusted script")
+            (root/"reference-provenance.json").write_text("{}")
+            with patch("geometry_harness.evaluation.counterfactual_shape._preflight") as original:
+                # A failed private audit is never bypassed to show a metric.
+                original.side_effect=ValueError("missing original")
+                with self.assertRaisesRegex(ValueError,"missing original"):
+                    diagnose_existing(root,root,root,root,root,root)
+
 if __name__ == "__main__":
     unittest.main()
