@@ -119,3 +119,50 @@ and refuses any prior scorer output. It does **not** overwrite GLBs, re-export
 or regenerate scenes; it scores only the existing verified stage. Resume itself
 never calls Luna. It refuses a partial/tampered stage; in that case preserve
 the failed output as evidence and use a **new** --out after fixing preflight.
+
+## When the finished scorer reports an unpaired baseline (2026-10-28)
+
+The original pinned upstream script uses `rng = np.random.default_rng(seed)`
+**once for all tasks**, then draws two random surface sample seeds for each
+present reference+generated mesh. Its alphabetical iteration order means that
+making previously missing AquariumTank, ArmChair and Bottle GLBs present
+changes the RNG state used for Balloon and CoffeeTable. Merely re-running
+with global `--seed 0` does **not** guarantee byte-identical per-task CD
+across a two-scene vs five-scene cohort. The strict `1e-6` matching gate
+therefore fails **even when source/ref GLB bytes and pinned script are
+unchanged**. This is a protocol mismatch, not evidence of tampering by itself.
+Never increase the tolerance arbitrarily to make it pass.
+
+The original reporting command wrote
+`counterfactual-shape-results.json` with UNKNOWN and null per-instance
+scores on this gate failure; the **actual upstream** per-scene scores remain
+preserved in the separate raw private
+`results/text_to_3D/gpt-6-luna/_metrics/shape_chamfer.json`.
+
+A read-only diagnosis is available after updating the branch:
+
+    cd ~/Projects/3d-rendering-llm
+    git pull --ff-only
+    export PYTHONPATH=src
+    python3 -m geometry_harness.evaluation.counterfactual_shape \
+      --diagnose-existing \
+      --original "$HOME/geometry-evidence/luna-six-original/historical-evidence" \
+      --baseline-stage "$HOME/geometry-evidence/luna-six-shape-stage" \
+      --derived "$HOME/geometry-evidence/luna-six-native-name-ablation-01" \
+      --out "$HOME/geometry-evidence/luna-six-five-scene-shape-01" \
+      --upstream "$HOME/geometry-evidence/3dcodebench-scorer" \
+      --refs "$HOME/geometry-evidence/luna-six-reference-glbs"
+
+It does **not** invoke the scorer again, change files, export Blender, or use
+model APIs. It independently checks original/derived evidence and stage hashes,
+scorer script+commit, and all six reference hashes. If those match and exactly
+5/6 per-instance statuses are scored, it returns
+`DESCRIPTIVE_5_SCENES_NOT_PAIRED` with the genuine per-task CD, yaw-min,
+and baseline drift. If provenance fails, the metric remains UNKNOWN/null.
+
+**This is not a new paired benchmark acceptance.** Before reporting precise
+same-protocol differences across runs, score every scene under independent
+per-task RNG initialization in an isolated scratch cohort, invoking the
+unchanged pinned scorer once per task. Compute a *new* per-task-seeded
+baseline and counterfactual, never overwrite the historical run. Repeatedly
+running the existing six-task scorer with `--seed 0` does not solve it.
