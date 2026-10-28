@@ -12,6 +12,9 @@ import hashlib
 import html
 import json
 from pathlib import Path
+import shutil
+
+from geometry_harness.costs.ledger import reconcile, load_events
 
 from geometry_harness.cli import png_dimensions
 
@@ -76,6 +79,14 @@ def audit(root: Path) -> dict:
         raise EvidenceError("Missing/duplicate task outcome; denominator must remain six")
     if cost.get("recorded_calls") != 6 or cost.get("grand_total_status") != "COMPLETE":
         raise EvidenceError("Cannot claim full priced six-task dataset audit")
+    try:
+        recalculated = reconcile(load_events(_file(root, "costs/events.jsonl")))
+    except (ValueError, KeyError, TypeError):
+        raise EvidenceError("Raw cost ledger cannot be independently reconciled") from None
+    if (recalculated.get("grand_total_status") != "COMPLETE"
+            or recalculated["recorded_calls"] != 6
+            or recalculated["priced_subtotal_usd"] != cost["priced_subtotal_usd"]):
+        raise EvidenceError("Saved summary differs from original per-call ledger")
     if cost.get("priced_subtotal_usd") != report.get("model_estimated_usd"):
         raise EvidenceError("Model cost mismatch")
     outcomes = []
@@ -164,6 +175,12 @@ def main(argv=None):
     result = audit(a.root)
     a.out.mkdir(parents=True)
     (a.out / "audit.json").write_text(json.dumps(result, indent=2) + "\n")
+    for item in result["tasks"]:
+        if item["preview_path"]:
+            src = _file(a.root.resolve(), item["preview_path"])
+            dest = a.out / item["preview_path"]
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dest)
     (a.out / "index.html").write_text(gallery(result))
     print(json.dumps({key: result[key] for key in
                       ("audit_status","native_pass","native_fail","native_unknown",
