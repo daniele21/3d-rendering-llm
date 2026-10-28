@@ -43,7 +43,7 @@ def build(spec_file: Path, out: Path):
             raise ValueError("Unsupported safe primitive type")
         obj = bpy.context.object
         obj.name = part["name"]
-        obj["geometry_id"] = part["name"]
+        obj["geometry_id"] = part.get("geometry_id", part["name"])
         obj.dimensions = part["dimensions"]
         bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
         mat = bpy.data.materials.new(f"part_{index + 1:02d}_material")
