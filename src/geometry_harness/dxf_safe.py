@@ -160,6 +160,9 @@ def compile_dxf(data: str, *, wall_height_m: float = 2.8,
         raise DXFReject("Require 1..64 bounded wall entities")
     output=[]
     for kind,fields in entities:
+        layers=[value for group,value in fields if group == 8]
+        if len(layers)!=1 or layers[0] not in {"WALLS","A-WALL"}:
+            raise DXFReject("Every wall must belong to an explicitly approved wall layer")
         for (x0,y0),(x1,y1) in _segments(kind,fields):
             x0,y0,x1,y1=(v*factor for v in (x0,y0,x1,y1))
             dx,dy=x1-x0,y1-y0
