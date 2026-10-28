@@ -73,7 +73,7 @@ def price_usage(usage: dict | None, *, model: str, api_style: str = "chat",
             raise ValueError("Invalid output-token detail")
         if reasoning is not None and reasoning > outs:
             raise ValueError("Reasoning token subset exceeds output")
-        writes = input_detail.get("cache_write_tokens", 0)
+        writes = input_detail.get("cache_write_tokens")
         if writes is None:
             raise ValueError("Unreported cache-write count")
         writes = _as_tokens(writes, "cache_write_tokens")
