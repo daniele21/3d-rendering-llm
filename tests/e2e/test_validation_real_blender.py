@@ -40,15 +40,16 @@ class RealViewsTests(unittest.TestCase):
         binary = blender_binary()
         self.assertIsNotNone(binary, "Real Blender mandatory for this test")
         _safe_run([binary, "-b", str(scene), "--python-exit-code", "14",
-                   "--python", str(SCRIPT), "--", "--out", str(out/"views")],
+                   "--python", str(SCRIPT), "--", "--out", str(out/"views-recheck")],
                   out/"views-run.txt", limit=120)
-        manifest = json.loads((out/"views"/"views-manifest.json").read_text())
+        self.assertTrue((out/"views"/"views-manifest.json").is_file())
+        manifest = json.loads((out/"views-recheck"/"views-manifest.json").read_text())
         self.assertEqual({x["view"] for x in manifest["views"]},
                          {"front","side","top","isometric"})
         self.assertEqual(manifest["quality_judgement"], "UNKNOWN_NO_VISUAL_JUDGE")
         self.assertEqual(before, hashlib.sha256(scene.read_bytes()).hexdigest())
         for x in manifest["views"]:
-            path = out/"views"/x["path"]
+            path = out/"views-recheck"/x["path"]
             self.assertGreater(path.stat().st_size, 100)
             self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), x["sha256"])
 
