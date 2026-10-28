@@ -60,6 +60,11 @@ Milestones are **acceptance gates**, not a prohibition on parallel isolated impl
 - It streams (without `extractall`) **only six GLBs**, demands 18 exact byte matches (6 factory scripts + 12 prompt files) and records source/archive/GLB SHA256. A mismatch invalidates reference comparability rather than generating a fake metric. No factory/model script is executed.
 - The pinned external Chamfer scorer now rejects missing/mismatched reference provenance and dirty scorer scripts. Offline contracts PASS; **the archive has not been downloaded and no real reference matching/score has been run** in this PR. Runbook: `docs/features/luna-shape-scoring-runbook.md`. User's historic private GCS audit is already verified; local two-scene GLB export is the next no-inference operation.
 
+### Historical Luna GLB operator evidence checkpoint (2026-10-28)
+
+- The private six-task GCS bundle was audited successfully and the operator ran **trusted native GLB staging**. Two accepted outputs: CoffeeTable 60,724 bytes (SHA-256 `9172fd95b587f52374233d6d9788106a418f400074a8ffcc144402be7a0d1345`), Balloon 746,316 bytes (SHA-256 `10224636e4c2de720d1a664dd54efe656fddcc340c52bf01d4ad3f33eddd6bb3`). Four other task results have no generated mesh; all six remain in the denominator.
+- **NOT RUN:** Chamfer and any official 3DCodeBench similarity score. The scorer needs six real provenance-matched reference GLBs in an isolated environment; the separate 1.95 GB HF archive is a candidate source, not a verified equivalent frozen reference set. Original CI state and $0.004875300 Luna estimated token spend unchanged; GLB staging itself made zero model calls.
+
 ### Wave 3 implementation checkpoint (2026-10-28)
 
 - **ARCH-01 / #51, #54:** strict ASCII DXF in mm/cm/m, only explicitly mapped WALLS/A-WALL entities, 2D axis-aligned LINE and open LWPOLYLINE. Bounded wall count, dimensions, entity types; no external references, scripts or customer data. Synthetic 6×4m four-wall room → trusted Blender mesh native reopen and independent dimensions PASS on Mac mini [40702702395](https://github.com/daniele21/local-runner-infra/actions/runs/40702702395), 145 GCS objects. **No** door, window, rotation, topological closure or multi-story handling claimed.
