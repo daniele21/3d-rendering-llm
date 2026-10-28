@@ -10,6 +10,8 @@
 | G1 controlled AST→Blender (trusted fixture, NO AI) including injection rejection | **PASS technical** | [Mac mini run 40669194991](https://github.com/daniele21/local-runner-infra/actions/runs/40669194991) |
 | First paid GPT-6.1 Sol request and token ledger; NO Blender execution | **PASS** | [Cost-probe run 40668374405](https://github.com/daniele21/local-runner-infra/actions/runs/40668374405), **$0.014708000** |
 | First paid GPT-6.1 Sol → safe Blender geometry → .blend + PNG + independent geometric checks + GCS | **PASS internal G1 smoke** | [Real G1 run 40669515643](https://github.com/daniele21/local-runner-infra/actions/runs/40669515643), **$0.003666000** |
+| G1 safe cube+cylinder+sphere primitives, fresh Blender reopen, GCS | **PASS technical, fixture without AI** | [main Mac mini run 40675988573](https://github.com/daniele21/local-runner-infra/actions/runs/40675988573), **33 private GCS objects** |
+| Benchmark generator-only prompt staging / hashes, no scorer reference leakage | **PASS offline contracts** | [PR #27](https://github.com/daniele21/3d-rendering-llm/pull/27), actual dataset revision still unpinned |
 | Full G1 quality benchmark on pinned 3DCodeBench smoke IDs and upstream scorer | **NOT DONE** | Task selection, dataset licensing and version isolation still pending |
 | Automated visual quality judgement, live editing, repair, offline models | **NOT DONE** | S2+ |
 
