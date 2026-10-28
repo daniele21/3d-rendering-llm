@@ -65,3 +65,33 @@ PYTHONPATH=src python3 -m geometry_harness.evaluation.upstream_shape_adapter \
 ```
 
 Upstream shape metric is relative to its references; **our narrow AST code execution is not the upstream Blender 5.0 free-Python execution protocol**. The code explicitly labels outputs NONCOMPARABLE to the official reference leaderboard until a compatible version/profile and tasks are verified. The six Luna historical outputs have not yet been scored.
+
+## Operator GLB staging completed — 2026-10-28
+
+The operator ran `geometry_harness.evaluation.upstream_shape_adapter --input ... --out ...`
+against the previously audited six-task private bundle. This is an **actual operator run**,
+not a repository CI run, and it did **not** call an AI model.
+
+- Output directory: `~/geometry-evidence/luna-six-shape-stage/` (also a second immutable
+  staging run under `~/geometry-evidence/luna-shape-6fiBlR1c/stage/`).
+- Original source revision: `be1a888dea819925cb855d95c18f4d75c0e934ce`;
+  frozen data revision `b70b4ee54b93fab76596da5809f3e71c617fa5c2`.
+- `CoffeeTable_seed0`: **60,724-byte** exported GLB,
+  SHA-256 `9172fd95b587f52374233d6d9788106a418f400074a8ffcc144402be7a0d1345`.
+- `Balloon_seed0`: **746,316-byte** exported GLB,
+  SHA-256 `10224636e4c2de720d1a664dd54efe656fddcc340c52bf01d4ad3f33eddd6bb3`.
+- `ArmChair_seed0`, `Bottle_seed0`, `AquariumTank_seed0`,
+  `BrainCoral_seed0`: no native accepted scene and no generated GLB;
+  remain explicitly `UNKNOWN`, not an invented empty/zero-valued mesh.
+- Staging status: `NOT_RUN_NO_REFERENCE_GLBS`,
+  `model_calls=0`, `new_api_cost_estimate_usd=0`.
+  Original run remained `INCOMPLETE`, with recorded estimated model-token
+  cost USD `0.004875300`.
+
+**Next acceptance gate:** obtain a consistent set of **six scorer-private reference
+GLBs**, verify each prompt against the pinned 3DCodeBench source and check
+Blender/scorer version comparability. The separate
+`3dcodebench/3dcodebench` tar archive (about 1.95 GB) includes reference GLBs
+and prompts, but it is a different release; never assume equivalence without
+per-task content checks. Do not run reference factory Python or create an
+"official score" from the two exported GLBs alone.
