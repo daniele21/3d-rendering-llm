@@ -54,6 +54,13 @@ Milestones are **acceptance gates**, not a prohibition on parallel isolated impl
 
 **Execution order for value:** baseline + tracing → cheap validator → typed revision/scoped repair → adaptive repair/meta-tools if measured → local vs cloud and structured-CAD vertical → partner integration after discovery. A local provider probe and synthetic DXF fixture may begin in parallel, but no claims of comparative improvement until the appropriate baseline exists.
 
+### Wave 3 implementation checkpoint (2026-10-28)
+
+- **ARCH-01 / #51, #54:** strict ASCII DXF in mm/cm/m, only explicitly mapped WALLS/A-WALL entities, 2D axis-aligned LINE and open LWPOLYLINE. Bounded wall count, dimensions, entity types; no external references, scripts or customer data. Synthetic 6×4m four-wall room → trusted Blender mesh native reopen and independent dimensions PASS on Mac mini [40702702395](https://github.com/daniele21/local-runner-infra/actions/runs/40702702395), 145 GCS objects. **No** door, window, rotation, topological closure or multi-story handling claimed.
+- **PERF-01 / #52:** G1 now writes a static observed-stage timeline and a separate trace-review.json report which reconciles every observed `llm.generate` span with an original paid-call ID, marking missing/unsettled/non-linked ledger as UNKNOWN. Mac [40701519157](https://github.com/daniele21/local-runner-infra/actions/runs/40701519157) PASS (138 GCS objects). **Not** the complete provider/network/runner queue or true end-to-end critical path.
+- **BH-02 / #53:** operator-only *read-only* retrieval/audit of the original six Luna task evidence from exact GCS prefix implemented and offline tested. **NOT RUN** against original GCS because central CI GCS identity has only `roles/storage.objectCreator` and cannot read objects. No IAM expanded. An alternate public benchmark dataset includes pre-exported GLB references but is separate (≈1.95 GB archive): its prompt/revision identity must be verified before scoring. No official quality metric, no new model calls.
+- Wave 3 implementation has zero new paid model inference. Historic 2 Sol + 6 Luna calls and estimated token spend **USD 0.023249300** unchanged; cloud storage and Mac runner charges separate.
+
 ### Wave 2 implementation checkpoint (2026-10-28)
 
 - **PERF-01 / #46:** explicit predecessor span IDs produce measured stage dependency chains; G1 true Blender E2E + private GCS PASS on Mac mini run 40697522356. Complete causal DAG across queue/provider/network/parallel workers and end-to-end accepted-result wall time remain OPEN.
