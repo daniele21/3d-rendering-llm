@@ -20,6 +20,15 @@ class SafeG1BlenderTests(unittest.TestCase):
         self.assertEqual(result["model_calls"], 0)
         self.assertEqual(result["evidence_type"], "trusted_fixture_safe_literal_bpy_to_blender")
         self.assertEqual(len(json.loads((root / "artifacts" / "geometry.json").read_text())["mesh_objects"]), 5)
+        geometric = json.loads((root / "geometry-issues.json").read_text())
+        self.assertEqual(geometric["status"], "PASS")
+        self.assertEqual(geometric["requirements_count"], 8)
+        cameras = json.loads((root / "views" / "views-manifest.json").read_text())
+        self.assertEqual({v["view"] for v in cameras["views"]},
+                         {"front", "side", "top", "isometric"})
+        for item in cameras["views"]:
+            self.assertGreater((root / "views" / item["path"]).stat().st_size, 100)
+        self.assertIn("views/top.png", {a["path"] for a in result["artifacts"]})
         self.assertTrue((root / "artifacts" / "scene.blend").read_bytes().startswith(b"BLENDER"))
         self.assertGreater((root / "artifacts" / "preview.png").stat().st_size, 100)
         self.assertTrue((root / "index.html").is_file())
