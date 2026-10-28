@@ -66,8 +66,10 @@ def conservative_max_usd(prompt: str) -> Decimal:
     # Upper bound by UTF-8 bytes + generous system/protocol token overhead,
     # not a model-averaged "4 chars/token" assumption. Also bound output.
     upper_input = len(prompt.encode("utf-8")) + 8192
-    input_rate, _, _, _, output_rate = RATE_CARD[MODEL]["short"]
-    return (Decimal(upper_input) * Decimal(input_rate) +
+    input_rate, read_rate, write_30m, write_12h, output_rate = RATE_CARD[MODEL]["short"]
+    # Upper-bound the most expensive possible input class, not only uncached.
+    input_rate = max(map(Decimal, (input_rate, read_rate, write_30m, write_12h)))
+    return (Decimal(upper_input) * input_rate +
             Decimal(MAX_OUTPUT_TOKENS) * Decimal(output_rate)) / Decimal(1_000_000)
 
 
