@@ -4,10 +4,12 @@ on:
   push:
     branches:
       - feature/architecture-b1-ezdxf-adapter
+      - feature/architecture-w2-dxf-edit-transaction
   pull_request:
     paths:
       - 'src/geometry_harness/domains/architecture/**'
       - 'tests/test_architecture_ezdxf_adapter.py'
+      - 'tests/test_architecture_dxf_transaction.py'
       - '.github/workflows/architecture-ezdxf-adapter.yml'
 
 permissions:
@@ -39,3 +41,21 @@ jobs:
         run: |
           python -m unittest discover -s tests -p 'test_architecture_ezdxf_adapter.py' -v
           python -m unittest discover -s tests -p 'test_architecture_plan_schema.py' -v
+          python -m unittest discover -s tests -p 'test_architecture_geometry_math.py' -v
+          python -m unittest discover -s tests -p 'test_architecture_dxf_transaction.py' -v
+      - name: Independent synthetic annotated DXF W2 acceptance (zero inference)
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m geometry_harness.domains.architecture.e2e_move_door --out "$RUNNER_TEMP/arch-mvp-dxf-$GITHUB_RUN_ID"
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          out=Path(os.environ["RUNNER_TEMP"])/("arch-mvp-dxf-"+os.environ["GITHUB_RUN_ID"])
+          data=json.loads((out/"e2e-manifest.json").read_text())
+          assert data["status"]=="PASS_EXACT_SYNTHETIC_DXF_MOVE_AND_ROLLBACK"
+          assert data["move_mm"]==300 and data["new_model_calls"]==0
+          assert len(data["artifacts"])>=8
+          assert (out/"transaction"/"candidate.dxf").is_file()
+          print("Real ezdxf synthetic E2E gate passed; no Blender or models")
+          PY
