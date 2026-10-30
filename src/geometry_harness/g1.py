@@ -148,7 +148,7 @@ def create_g1(root: Path, *, fixture_source: str | None = None) -> dict:
             raw_source = fixture_source
         (artifacts / "model-generated.py").write_text(raw_source, encoding="utf-8")
         with tracer.span("code.compile", depends_on=(previous_span_id,) if previous_span_id else ()) as stage:
-            parts = compile_bpy_subset(raw_source)
+            parts = compile_bpy_subset(raw_source, normalize_names=True)
         previous_span_id = stage.span_id
         (artifacts / "scene-spec.json").write_text(json.dumps(parts, indent=2) + "\n")
         with tracer.span("geometry.validate", depends_on=(previous_span_id,)) as stage:

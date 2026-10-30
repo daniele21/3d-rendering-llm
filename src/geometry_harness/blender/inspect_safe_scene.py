@@ -22,7 +22,7 @@ def check(spec_path: Path, output: Path):
         expected = reference.get(name)
         if expected is None:
             continue
-        if obj.get("geometry_id") != name:
+        if obj.get("geometry_id") != expected.get("geometry_id", name):
             errors.append(f"{name}: stable geometry ID absent")
         for a in range(3):
             if abs(float(obj.dimensions[a]) - expected["dimensions"][a]) > .001:

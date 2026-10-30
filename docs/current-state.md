@@ -4,6 +4,41 @@
 
 **Latest BH-02 (2026-10-28): upstream Chamfer actually executed on 6 frozen reference IDs with 2 valid generated GLBs. Raw normalized squared Chamfer conditional mean **0.33838396924096587**; failure-penalized six-task mean **0.7474027587207573**. This is a noncomparable internal geometry result, NOT a percentage or an official leaderboard rank. New paid model requests: 0.** See [shape-scoring evidence](features/luna-first-shape-chamfer-results.md).
 
+**Latest G1/BH-02 counterfactual operator checkpoint (2026-10-28, PR #66,
+NOT merged into main):** The historical GPT-6 Luna source result remains
+2/6 native valid / INCOMPLETE. Deterministic literal-name ablation separately
+recovered AquariumTank, ArmChair and Bottle, yielding **5/6** counterfactual
+native-valid GLBs. After confirming the unchanged frozen reference GLBs and
+scorer script, the first five-scene run was descriptive only because the
+upstream scorer uses a run-global RNG. A second **new independently seeded
+per-task** protocol on the Mac returned
+`PER_TASK_RNG_ISOLATED_REPRODUCIBLE` with exactly matched shared original
+tasks (CoffeeTable and Balloon), 2 baseline scored / 5 candidate scored,
+mean conditional CD `0.15543481398467845`. Bottle CD 0.0126790194,
+ArmChair 0.0361636561, AquariumTank 0.0492351973 (yaw-min 0.0283465982),
+CoffeeTable 0.0444880948, Balloon 0.6346081023; BrainCoral unscored.
+**These are real private operator observations, not official 3DCodeBench
+scores or demonstrated semantic quality.** No additional model inference or
+new paid Luna calls were made. Real Mac native normalizer E2E and human
+prompt/reference visual validation remain open. See
+[full measured protocol](features/g1-native-name-normalization-and-five-scene-scoring.md).
+
+**Operator four-view review (2026-10-30, PR #66 feature branch):**
+The supplied private five-scene ZIP contains **20/20 valid 640x480 Workbench
+PNG views**, correctly matched by five SHA-256/size manifests from Blender
+5.2.3 LTS. Mesh counts: AquariumTank 22, ArmChair 15, Bottle 16,
+Balloon 15, CoffeeTable 8. Qualitative four-view inspection confirms
+recognizable primitives for AquariumTank, ArmChair, Bottle and CoffeeTable
+with simplifications, but **Balloon's inflated letters are fragmented into
+disconnected-looking ellipsoids**; AquariumTank's cactus is hard to recognize,
+ArmChair lacks curved upholstery and Bottle has a stepwise rather than
+smoothly tapered form. Low normalized Chamfer does not establish prompt or
+visual fidelity. Workbench cannot validate transparent glass or other PBR
+effects. This review is *not* an independent reference-image matching score;
+prompt-criterion quality and exact reference matching are still OPEN.
+The private uploaded ZIP contained no G1 name normalizer native E2E log, so
+that gate remains OPEN. See [full review](features/g1-native-name-normalization-and-five-scene-scoring.md).
+
 ## Evidence already generated
 
 | Capability | Gate | Proof |
@@ -30,8 +65,8 @@
 | BH-02 external reference GLB provenance gate | **PASS real public archive / six frozen references; shape scoring OPEN** | [Public CI run 40714389048](https://github.com/daniele21/3d-rendering-llm/actions/runs/40714389048) read the full 1.95 GB archive at `3dcodebench/3dcodebench@e01cafff...`, confirmed published SHA256 `459944518cb6e5f2a1f8de70ab273f557f4fe243b5dba7b44bb50c0e7b9563bc` and exact six factory + twelve prompt byte matches against frozen `YipengGao/3DCode@b70b4ee...`. Hash-only metadata (no GLBs/factory scripts) uploaded to public CI. No model calls, no Chamfer scores. Original two Luna GLBs already exported privately; local isolated scoring still pending |
 | Historic Luna accepted-scene GLB export from previously verified private six-task bundle | **PASS operator stage, reference shape scoring OPEN** | Operator ran `upstream_shape_adapter`: CoffeeTable GLB 60,724 B SHA `9172fd95…d1345`; Balloon GLB 746,316 B SHA `10224636…6bb3`; six task records preserved, four with no generated GLB. `scoring_status=NOT_RUN_NO_REFERENCE_GLBS`, no new model calls or scoring claims. Staging under private `~/geometry-evidence/luna-six-shape-stage/` |
 | **First real upstream Chamfer scorer on historical six-task Luna artifacts** | **PASS internal shape metric (2/6 valid), NOT OFFICIAL comparable leaderboard** | 2026-10-28 operator run: 6/6 public reference prompt/script byte matches, archive SHA256 `459944518cb6e5f2a1f8de70ab273f557f4fe243b5dba7b44bb50c0e7b9563bc`, scorer Git SHA `42c7780ed3fcbd466f17f058f62e7996233777f7`; **CD conditional 0.33838396924096587 (2 valid), penalized 0.7474027587207573 (6 attempts)**; per-instance **CoffeeTable 0.04215983617482963 (yaw 0°)** and **Balloon 0.6346081023071021 (yaw-min 0.5759648164497149 at 270°)**; four `NO_GEN_GLB`; 0 new AI calls. Four tasks had no generated GLB; original CI still INCOMPLETE. Profile `NONCOMPARABLE_5_2_BLENDER_AND_RESTRICTED_AST`. [Methods/limits](features/luna-first-shape-chamfer-results.md) |
-| Native Blender name-only ablation on three originally rejected Luna scripts | **PASS 3/3 derived; historical remains 2/6** | Authorized operator 2026-10-28 `native-name-ablation.json`: `AquariumTank_seed0` 22 meshes, `ArmChair_seed0` 15, `Bottle_seed0` 16; all native Blender `PASS` and independent reopened scenes, no errors, 0 new Luna calls. **5/6 counterfactual (83.3%)**, not an original run or semantic/shape score. Derived shape quality **UNKNOWN_NOT_SHAPE_SCORED**; original two-scene Chamfer remains separately measured (CoffeeTable 0.04216, Balloon 0.63461). Original `BrainCoral_seed0` remains missing (reasoning/output budget exhaustion). Private evidence kept on operator's Mac, not in repo |
-| Full G1 quality benchmark on pinned 3DCodeBench smoke IDs and upstream scorer | **PARTIAL: first real shape metric PASS; full comparable/visual/semantic quality NOT VERIFIED** | Need per-task shape scores + yaw-min, human/visual/prompt metrics, same Blender profile and matched quality evaluation across complete tasks, followed by 24-task representative core; six-task experimental score is not official leaderboard comparability |
+| Native Blender name-only ablation on three originally rejected Luna scripts | **PASS 3/3 derived; historical remains 2/6** | Authorized operator 2026-10-28 `native-name-ablation.json`: `AquariumTank_seed0` 22 meshes, `ArmChair_seed0` 15, `Bottle_seed0` 16; all native Blender `PASS` and independent reopened scenes, no errors, 0 new Luna calls. **5/6 counterfactual (83.3%)**, not an original run or semantic/shape score. Derived **per-task pinned normalized Chamfer now actually measured**: AquariumTank 0.0492351973, ArmChair 0.0361636561, Bottle 0.0126790194; their **visual and semantic quality remains UNKNOWN**. Historical two-scene Chamfer remains separately measured (CoffeeTable 0.04216, Balloon 0.63461) using the prior global-RNG protocol. Original `BrainCoral_seed0` remains missing (reasoning/output budget exhaustion). Private evidence kept on operator's Mac, not in repo |
+| Full G1 quality benchmark on pinned 3DCodeBench smoke IDs and upstream scorer | **PARTIAL: per-task shape CD pinned PASS for 5/6; visual/semantic and official comparability NOT VERIFIED** | Operator confirmed 7 one-task pinned scorer invocations: 2 original and 5 counterfactual, same original GLB hashes and exactly matched per-task scores on shared CoffeeTable/Balloon. Per-task conditional CD 0.15543481398467845; BrainCoral unavailable. Still need explicit human/visual/prompt criteria and broader 24-task coverage, without extrapolating six-scene performance to product |
 | Automated visual quality judgement, live editing, repair, offline models | **NOT DONE** | S2+ |
 
 **Cost accounting:** eight observed real API calls total: 2 historical Sol requests **$0.018374000** plus 6 Luna benchmark requests **$0.004875300**, combined **$0.023249300 USD** *estimated model-token cost*. This is not an OpenAI invoice or combined GCS/compute cost. Detailed noncached/cached-read/cached-write/output/reasoning counters and versioned tariff live in private immutable per-run JSONL ledgers; see [model-cost-observability.md](features/model-cost-observability.md). No further paid calls on routine pushes.

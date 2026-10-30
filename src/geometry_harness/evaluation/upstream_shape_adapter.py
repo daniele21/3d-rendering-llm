@@ -87,8 +87,14 @@ def stage(input_root: Path, output: Path, *, binary: str | None = None) -> dict:
 def score(output: Path, upstream: Path, refs: Path) -> dict:
     output,upstream,refs=output.resolve(),upstream.resolve(),refs.resolve()
     report_file=output/"scorer-staging.json"
-    if not report_file.is_file() or not (upstream/"metrics"/"shape_chamfer.py").is_file():
-        raise ShapeGateError("Scorer staging and pinned upstream script required")
+    if not report_file.is_file() or report_file.is_symlink():
+        raise ShapeGateError(f"Missing safe scorer staging: {report_file}")
+    script=upstream/"metrics"/"shape_chamfer.py"
+    if not script.is_file() or script.is_symlink():
+        raise ShapeGateError(
+            f"Pinned upstream scorer not found: {script}. "
+            "Pass --upstream as the root of the pinned gaoypeng/3dcodebench checkout, "
+            "not the metrics directory or the historical result directory.")
     report=json.loads(report_file.read_text())
     if report.get("upstream_commit")!=UPSTREAM_COMMIT:
         raise ShapeGateError("Unexpected scorer provenance")
