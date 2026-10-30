@@ -18,7 +18,7 @@ LOOPBACK = "127.0.0.1"
 PORT = 11434
 CHAT_PATH = "/api/chat"
 DEFAULT_MODEL = "qwen3-coder:30b-a3b-q4_K_M"
-TAG = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*:[A-Za-z0-9][A-Za-z0-9_.-]*\\Z")
+TAG = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*:[A-Za-z0-9][A-Za-z0-9_.-]*\Z")
 MAX_BODY = 1_048_576
 
 
