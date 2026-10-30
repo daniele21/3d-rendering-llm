@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "experiment": "G1_QWEN_VS_LUNA_TWO_TASK_SAME_PINNED_CHAMFER_2026_10_30",
+  "status": "MAC_MINI_SELFHOSTED_CHAMFER_AND_PRIVATE_GCS_VERIFIED",
+  "task_ids": [
+    "CoffeeTable_seed0",
+    "Bottle_seed0"
+  ],
+  "data_source": "YipengGao/3DCode",
+  "dataset_revision": "b70b4ee54b93fab76596da5809f3e71c617fa5c2",
+  "scorer_repository": "gaoypeng/3dcodebench",
+  "scorer_commit": "42c7780ed3fcbd466f17f058f62e7996233777f7",
+  "scorer_parameters": {
+    "sample_points": 8192,
+    "seed": 0,
+    "normalization": "unit_sphere",
+    "yaw_degrees": [
+      0,
+      90,
+      180,
+      270
+    ],
+    "process_scope": "independent_per_task"
+  },
+  "qwen": {
+    "model": "qwen3-coder-30b-q4km",
+    "source_sha": "9ad96935863466d3415c39a7821d20f02ef523f5",
+    "original_native_pass": "1/2",
+    "local_generation_total_model_calls": 2,
+    "scoring_new_model_calls": 0,
+    "source_cohorts": {
+      "CoffeeTable_seed0": "original_native_pass",
+      "Bottle_seed0": "posthoc_opt_in_cone_native_pass"
+    }
+  },
+  "luna": {
+    "model": "gpt-6-luna",
+    "historical_original_native_pass": "2/6",
+    "name_normalized_counterfactual_native_pass": "5/6",
+    "scoring_cohorts": {
+      "CoffeeTable_seed0": "original_native_pass",
+      "Bottle_seed0": "posthoc_name_normalized_native_pass"
+    }
+  },
+  "per_task": [
+    {
+      "task_id": "CoffeeTable_seed0",
+      "luna": {
+        "cd": 0.04448809481252921,
+        "cd_yawmin": 0.04448809481252921,
+        "yaw_argmin": 0
+      },
+      "qwen": {
+        "cd": 0.12174330504733939,
+        "cd_yawmin": 0.11237587222462117,
+        "yaw_argmin": 90
+      },
+      "lower_cd": "gpt-6-luna"
+    },
+    {
+      "task_id": "Bottle_seed0",
+      "luna": {
+        "cd": 0.012679019359197156,
+        "cd_yawmin": 0.012679019359197156,
+        "yaw_argmin": 0
+      },
+      "qwen": {
+        "cd": 0.020922000659238202,
+        "cd_yawmin": 0.020922000659238202,
+        "yaw_argmin": 0
+      },
+      "lower_cd": "gpt-6-luna"
+    }
+  ],
+  "qwen_evidence": {
+    "workflow_repository": "daniele21/local-runner-infra",
+    "workflow_file": ".github/workflows/geometry-mac-mini.yml",
+    "workflow_run_id": 41078680362,
+    "workflow_run_url": "https://github.com/daniele21/local-runner-infra/actions/runs/41078680362",
+    "workflow_conclusion": "success",
+    "private_gcs_prefix": "gs://project-tests-498508-geometry-showcase/geometry-harness/qwen-chamfer/9ad96935863466d3415c39a7821d20f02ef523f5/41078680362-attempt-1",
+    "upload_verified_object_count": 17,
+    "gcs_upload_proof": "The action returned 17 uploaded paths; separate step verified required JSON, both GLB and both scorer stdout paths.",
+    "wif_scope": "Restricted to central geometry-mac-mini.yml@main; no IAM attribute broadening"
+  },
+  "luna_evidence": {
+    "repo_document": "docs/features/g1-native-name-normalization-and-five-scene-scoring.md",
+    "private_operator_report": "~/geometry-evidence/luna-six-per-task-chamfer-01/paired-one-task-chamfer.json",
+    "scoring_protocol_status": "PER_TASK_RNG_ISOLATED_REPRODUCIBLE"
+  },
+  "warnings": [
+    "Internal matched scorer protocol, NOT official 3DCodeBench leaderboard.",
+    "Bottle is posthoc-normalized for Luna and posthoc-cone for Qwen: do not treat either as original instruction-following success.",
+    "System prompts and reasoning profiles differ; comparison is across observed pipelines, not isolated causal model capability.",
+    "Chamfer omits semantic fidelity, materials, topology and real-world scale.",
+    "Original Qwen two-task model calls=2, new model calls for independent scoring=0."
+  ]
+}

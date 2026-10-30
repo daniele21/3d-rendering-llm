@@ -70,7 +70,8 @@ def _vec(value, label, *, positive=False):
     return out
 
 
-def compile_bpy_subset(source: str, *, normalize_names: bool = False) -> dict:
+def compile_bpy_subset(source: str, *, normalize_names: bool = False,
+                       allow_cone: bool = False) -> dict:
     """Accept only sequential literal bpy primitive operations.
 
     Supported form:
@@ -80,8 +81,10 @@ def compile_bpy_subset(source: str, *, normalize_names: bool = False) -> dict:
       obj.name = "tabletop"
       obj.dimensions = (2, 1, .1)
 
-    Repeated to 1..48 uniquely named primitives. No arbitrary code, loops,
-    functions, helper calls, materials, I/O or arbitrary bpy access.
+    Repeated to 1..48 uniquely named primitives. An optional, separately
+    labeled counterfactual allows a bounded cone with explicit radii.
+    The default original benchmark contract rejects cones unchanged.
+    No arbitrary code, loops, helper calls, materials or I/O.
     """
     if not isinstance(source, str) or not 1 <= len(source) <= 160000:
         raise UnsafeGeneratedCode("Invalid source length")
@@ -89,6 +92,11 @@ def compile_bpy_subset(source: str, *, normalize_names: bool = False) -> dict:
         root = ast.parse(source)
     except SyntaxError:
         raise UnsafeGeneratedCode("Generated source is not valid Python") from None
+    if type(allow_cone) is not bool:
+        raise UnsafeGeneratedCode("allow_cone must be a boolean opt-in")
+    allowed_primitives = dict(_PRIMITIVES)
+    if allow_cone:
+        allowed_primitives["bpy.ops.mesh.primitive_cone_add"] = "cone"
     objects: list[dict] = []
     current = None
     active_var = None
@@ -99,7 +107,7 @@ def compile_bpy_subset(source: str, *, normalize_names: bool = False) -> dict:
             raise UnsafeGeneratedCode("Only import bpy is permitted")
         if isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Call):
             call = statement.value
-            kind = _PRIMITIVES.get(_path(call.func))
+            kind = allowed_primitives.get(_path(call.func))
             if kind is None or call.args:
                 raise UnsafeGeneratedCode("Unsupported Blender operation")
             if current is not None:
@@ -109,7 +117,8 @@ def compile_bpy_subset(source: str, *, normalize_names: bool = False) -> dict:
             attrs = {}
             kwargs = {"cube": {"size", "location"},
                       "cylinder": {"radius", "depth", "vertices", "location"},
-                      "uv_sphere": {"radius", "segments", "ring_count", "location"}}[kind]
+                      "uv_sphere": {"radius", "segments", "ring_count", "location"},
+                      "cone": {"radius1", "radius2", "depth", "vertices", "location"}}[kind]
             for kw in call.keywords:
                 if not kw.arg or kw.arg not in kwargs or kw.arg in attrs:
                     raise UnsafeGeneratedCode("Unexpected primitive creation argument")
@@ -125,6 +134,22 @@ def compile_bpy_subset(source: str, *, normalize_names: bool = False) -> dict:
                 vertices = _integer(attrs.get("vertices", 32), "cylinder vertices", 8, 64)
                 dimensions = [2 * radius, 2 * radius, depth]
                 geometry = {"radius": radius, "depth": depth, "vertices": vertices}
+            elif kind == "cone":
+                # A tip radius of zero is valid; both zero is degenerate.
+                # Require explicit radii to keep the experimental shape unambiguous.
+                if "radius1" not in attrs or "radius2" not in attrs:
+                    raise UnsafeGeneratedCode("Cone requires explicit radius1 and radius2")
+                r1, r2 = attrs["radius1"], attrs["radius2"]
+                if (type(r1) not in (int, float) or type(r2) not in (int, float)
+                        or not math.isfinite(r1) or not math.isfinite(r2)
+                        or not 0 <= r1 <= 15 or not 0 <= r2 <= 15
+                        or max(r1, r2) < 0.001):
+                    raise UnsafeGeneratedCode("Cone radii must be finite, bounded and nondegenerate")
+                depth = _positive(attrs.get("depth", 2), "cone depth", 30)
+                vertices = _integer(attrs.get("vertices", 32), "cone vertices", 8, 64)
+                dimensions = [2 * float(max(r1, r2))] * 2 + [depth]
+                geometry = {"radius1": float(r1), "radius2": float(r2),
+                            "depth": depth, "vertices": vertices}
             else:
                 radius = _positive(attrs.get("radius", 1), "sphere radius", 15)
                 segments = _integer(attrs.get("segments", 24), "sphere segments", 8, 64)
