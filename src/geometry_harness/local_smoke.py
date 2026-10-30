@@ -81,7 +81,7 @@ def _load_prompts(public_root: Path, suite_path: Path,
             if path.is_symlink() or not path.is_file() or not path.resolve().is_relative_to(public_root.resolve()):
                 raise LocalSmokeError("Unsafe public task prompt file")
             content = path.read_bytes()
-            if not 0 < len(content) <= 128 * 1024 or b"\\x00" in content:
+            if not 0 < len(content) <= 128 * 1024 or b"\x00" in content:
                 raise LocalSmokeError("Invalid prompt bytes")
             if hashlib.sha256(content).hexdigest() != inventory[task][hash_field]:
                 raise LocalSmokeError("Public prompt hash mismatch")
