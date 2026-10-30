@@ -205,5 +205,55 @@ class LocalSmokeTests(unittest.TestCase):
             self.assertTrue((root/"out"/"local-benchmark.json").exists())
 
 
+    def test_two_phase_generation_no_blender_and_validate_after_korgis_stops(self):
+        from geometry_harness.evaluation.local_staged_blender import run as validate_stage
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            public, suite = stage_fixtures(root)
+            source = ("import bpy\nbpy.ops.mesh.primitive_cube_add(size=1, location=(0,0,1))\n"
+                      "obj=bpy.context.object\nobj.name='top plate'\nobj.dimensions=(2,1,1)\n")
+            engine = MockEngine(source)
+            with patch("geometry_harness.local_smoke.blender_binary") as blender:
+                staged = run(root/"stage", public, suite, task_ids=(EXPECTED_IDS[0],),
+                             provider=engine, generation_only=True)
+                blender.assert_not_called()
+            self.assertEqual(staged["native_pass"], 0)
+            self.assertEqual(staged["safe_source_pass"], 1)
+            self.assertEqual(staged["phase"], "GENERATION_ONLY_REQUIRES_LATER_BLENDER")
+            self.assertEqual(engine.count, 1)
+            def fake_build(_binary, folder):
+                (folder/"scene.blend").write_bytes(b"BLENDER")
+                (folder/"geometry.json").write_text(json.dumps({"passed":True}))
+                (folder/"preview.png").write_bytes(b"PNG_TEST")
+            with patch("geometry_harness.evaluation.local_staged_blender.blender_binary",
+                       return_value="/fake/blender"), patch(
+                "geometry_harness.evaluation.local_staged_blender._build_and_reopen",
+                side_effect=fake_build) as build:
+                valid = validate_stage(root/"stage", root/"validated")
+            self.assertEqual(valid["native_pass"], 1)
+            self.assertEqual(valid["model_calls"], 0)
+            self.assertEqual(build.call_count, 1)
+            self.assertEqual(valid["per_instance"][0]["native_scene"], "PASS")
+            self.assertTrue((root/"validated"/"local-blender-validation.json").is_file())
+
+    def test_stage_tampering_cannot_run_blender(self):
+        from geometry_harness.evaluation.local_staged_blender import (
+            run as validate_stage, StagedBlenderError,
+        )
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td)
+            public,suite=stage_fixtures(root)
+            source = ("import bpy\nbpy.ops.mesh.primitive_cube_add(size=1, location=(0,0,1))\n"
+                      "obj=bpy.context.object\nobj.name='top plate'\nobj.dimensions=(2,1,1)\n")
+            run(root/"stage",public,suite,task_ids=(EXPECTED_IDS[0],),
+                provider=MockEngine(source),generation_only=True)
+            (root/"stage"/"tasks"/EXPECTED_IDS[0]/"model-generated.py").write_text("import os\n")
+            with patch("geometry_harness.evaluation.local_staged_blender.blender_binary") as blender:
+                with self.assertRaisesRegex(StagedBlenderError,"hash/bytes mismatch"):
+                    validate_stage(root/"stage",root/"validated")
+                blender.assert_not_called()
+            self.assertFalse((root/"validated").exists())
+
+
 if __name__=="__main__":
     unittest.main()
