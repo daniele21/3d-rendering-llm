@@ -1,0 +1,97 @@
+{
+  "schema": "architecture_mvp_suite_v1",
+  "status": "W0_INITIAL_TEN_CASES_REGISTERED_NOT_FULL_30_ACCEPTED",
+  "revision": "2026-10-30",
+  "target_total": 30,
+  "initial_registered": 10,
+  "source": "synthetic_public_only",
+  "generator_visible_fields": [
+    "task_id",
+    "instruction",
+    "fixture_ref"
+  ],
+  "scorer_private_fields": [
+    "expected_outcome",
+    "expected_change_mm",
+    "expected_error_class"
+  ],
+  "groups": {
+    "import": 10,
+    "rejection": 10,
+    "edit": 10
+  },
+  "cases": [
+    {
+      "task_id": "arch_import_single_room",
+      "kind": "import",
+      "fixture_ref": "single_room",
+      "instruction": "Load a 5m by 4m synthetic room with explicit mm units. Report stable wall geometry.",
+      "expected_outcome": "PLAN_SCHEMA_PASS"
+    },
+    {
+      "task_id": "arch_import_two_rooms",
+      "kind": "import",
+      "fixture_ref": "two_rooms",
+      "instruction": "Load two adjacent synthetic rooms with a shared interior partition; do not invent room topology.",
+      "expected_outcome": "PLAN_SCHEMA_PASS"
+    },
+    {
+      "task_id": "arch_import_hosted_door",
+      "kind": "import",
+      "fixture_ref": "hosted_door",
+      "instruction": "Identify an opening attached to an existing wall without changing input measurements.",
+      "expected_outcome": "PLAN_SCHEMA_PASS"
+    },
+    {
+      "task_id": "arch_import_oblique_wall",
+      "kind": "import",
+      "fixture_ref": "oblique_wall",
+      "instruction": "Preserve an explicitly measured diagonal wall and hosted door, do not axis-align it.",
+      "expected_outcome": "PLAN_SCHEMA_PASS"
+    },
+    {
+      "task_id": "arch_reject_nonmm_units",
+      "kind": "rejection",
+      "fixture_ref": "nonmm_units",
+      "instruction": "Import a source claiming metre units into the strict mm PlanScene contract.",
+      "expected_outcome": "PLAN_SCHEMA_REJECT"
+    },
+    {
+      "task_id": "arch_reject_orphan_opening",
+      "kind": "rejection",
+      "fixture_ref": "orphan_opening",
+      "instruction": "Reject an opening pointing to a wall not present in the source.",
+      "expected_outcome": "PLAN_SCHEMA_REJECT"
+    },
+    {
+      "task_id": "arch_reject_overhang",
+      "kind": "rejection",
+      "fixture_ref": "overhang",
+      "instruction": "Reject a door extending beyond its measured host wall.",
+      "expected_outcome": "PLAN_SCHEMA_REJECT"
+    },
+    {
+      "task_id": "arch_reject_duplicate_wall_ids",
+      "kind": "rejection",
+      "fixture_ref": "duplicate_wall_ids",
+      "instruction": "Reject two walls sharing the same stable identifier.",
+      "expected_outcome": "PLAN_SCHEMA_REJECT"
+    },
+    {
+      "task_id": "arch_edit_move_door_300",
+      "kind": "edit",
+      "fixture_ref": "hosted_door",
+      "instruction": "Move door_001 exactly 300 mm along wall_001 while preserving width and other entities.",
+      "expected_outcome": "EDIT_GATE_PENDING",
+      "expected_change_mm": 300
+    },
+    {
+      "task_id": "arch_edit_resize_door_100",
+      "kind": "edit",
+      "fixture_ref": "hosted_door",
+      "instruction": "Increase width of door_001 by exactly 100 mm, keeping its host and offset unchanged.",
+      "expected_outcome": "EDIT_GATE_PENDING",
+      "expected_change_mm": 100
+    }
+  ]
+}
