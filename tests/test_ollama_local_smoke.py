@@ -170,9 +170,11 @@ class LocalSmokeTests(unittest.TestCase):
                 log.write_text("audited fake Blender fixture")
                 if "build_safe_scene.py" in " ".join(map(str,cmd)):
                     (folder/"scene.blend").write_bytes(b"BLENDER")
+                    from geometry_harness.cli import PNG_MAGIC
+                    import struct
                     (folder/"preview.png").write_bytes(
-                        b"\x89PNG\r\n\x1a\n" + b"\x00"*8 +
-                        b"\x00\x00\x03\x20" + b"\x00\x00\x02\x58"
+                        PNG_MAGIC + bytes((0, 0, 0, 13)) + b"IHDR" +
+                        struct.pack(">II", 800, 600)
                     )
                 else:
                     (folder/"geometry.json").write_text(json.dumps({"passed":True}))
