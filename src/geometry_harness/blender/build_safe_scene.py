@@ -35,6 +35,11 @@ def build(spec_file: Path, out: Path):
             bpy.ops.mesh.primitive_cylinder_add(
                 vertices=part["vertices"], radius=part["radius"],
                 depth=part["depth"], location=part["location"])
+        elif kind == "cone":
+            bpy.ops.mesh.primitive_cone_add(
+                vertices=part["vertices"], radius1=part["radius1"],
+                radius2=part["radius2"], depth=part["depth"],
+                location=part["location"])
         elif kind == "uv_sphere":
             bpy.ops.mesh.primitive_uv_sphere_add(
                 segments=part["segments"], ring_count=part["ring_count"],
