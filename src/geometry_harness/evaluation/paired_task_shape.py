@@ -51,11 +51,11 @@ def _safe_env() -> dict:
 
 
 def _score_one(scorer: Path, refs: Path, root: Path, task: str,
-               glb: Path) -> dict:
+               glb: Path, *, model: str = MODEL) -> dict:
     """One scorer process, one instance, frozen sampling configuration."""
     root.mkdir(parents=True)
     instance_root = root / "results" / "text_to_3D"
-    target = instance_root / MODEL / task / "glb"
+    target = instance_root / model / task / "glb"
     target.mkdir(parents=True)
     dest = target / (task + ".glb")
     shutil.copyfile(glb, dest)
@@ -63,7 +63,7 @@ def _score_one(scorer: Path, refs: Path, root: Path, task: str,
         raise ShapeGateError("Paired one-task generated GLB differs from verified source")
     command = [
         sys.executable, str(scorer),
-        "--model", MODEL,
+        "--model", model,
         "--results-root", str(instance_root),
         "--data-root", str(refs),
         "--instances", task,
@@ -81,12 +81,12 @@ def _score_one(scorer: Path, refs: Path, root: Path, task: str,
     (root / "scorer-stderr.txt").write_text(result.stderr, encoding="utf-8")
     if result.returncode:
         raise ShapeGateError(f"One-task scorer failure for {task}: code={result.returncode}")
-    metric_file = instance_root / MODEL / "_metrics" / "shape_chamfer.json"
+    metric_file = instance_root / model / "_metrics" / "shape_chamfer.json"
     if metric_file.is_symlink() or not metric_file.is_file():
         raise ShapeGateError(f"One-task scorer did not create metric for {task}")
     data = json.loads(metric_file.read_text(encoding="utf-8"))
     rows = data.get("per_instance")
-    if (data.get("model") != MODEL or data.get("n_instances") != 1
+    if (data.get("model") != model or data.get("n_instances") != 1
             or data.get("n_ok") != 1 or data.get("n_points") != POINTS
             or data.get("normalization") != "unit_sphere"
             or data.get("yaw_alignment") != [0, 90, 180, 270]
