@@ -299,3 +299,46 @@ criteria and per-scene FAIL/PASS/UNKNOWN with evidence identifiers, and
 explicitly decide whether to attempt BrainCoral's separately authorized
 token-budget experiment. Do not extrapolate this six-sample smoke to
 broader benchmark or partner/customer use.
+
+## Operator-supplied real five-scene four-view review (2026-10-30)
+
+The operator supplied private `luna-six-visual-review-01.zip` for evaluation.
+This archive holds all 20 expected actual Blender Workbench PNGs (front,
+side, top, isometric for 5 scenes), with 5 corresponding
+`views-manifest.json` records. Independent ZIP inspection verified
+**20/20 PNG SHA-256 hashes and sizes**, 640x480 resolution for each
+view, and Blender `5.2.3 LTS` in each manifest. Each records
+`source_scene_saved=true`,
+`original_blend_modified_on_disk=false` (manifest-reported; not independently
+verified against baseline disk files), and
+`quality_judgement=UNKNOWN_NO_VISUAL_JUDGE`.
+
+| Task | Four views verified | Mesh count in manifest | Qualitative morphology review | Important limitations |
+| --- | --- | ---: | --- | --- |
+| Bottle_seed0 | YES | 16 | Recognizably bottle-like stacked cylindrical body and small neck | Cylindrical stepwise shoulder/body, no clearly smooth/tapered bottle silhouette; very low Chamfer does not prove detailed fidelity |
+| ArmChair_seed0 | YES | 15 | Recognizable chair with two arms and front ottoman/footrest | Entire seat/back simplified block geometry, no clearly curved backrest or realistic upholstery |
+| AquariumTank_seed0 | YES | 22 | Rectangular open-top enclosure with frame and distinct wall panels | Cactus appears as tiny indistinct parts inside rather than a legible plant; Workbench cannot validate real glass optical transmission |
+| CoffeeTable_seed0 | YES | 8 | Two rectangular shelves connected with two pedestals; recognizable coffee table | Claimed rounded tabletop in source is still a cube with sharp straight corners |
+| Balloon_seed0 | YES | 15 | Thin horizontal arrangement of isolated ellipsoids | Fails recognizability as a connected hollow inflated balloon-letter sign; fragments do not form continuous letter strokes |
+
+These are **manual visual observations of the provided four-view images**;
+neither a numeric visual reference similarity test nor definitive prompt
+fidelity classification. The uploaded ZIP has **no saved reference images,
+no text prompts, no .blend files, and no native-normalizer test log**.
+The four-view renderer uses `BLENDER_WORKBENCH`; therefore it does not
+establish PBR material, transparent glass transmission, refractive behavior,
+accurate texture or photorealistic quality. The appearance and geometric
+shape criticisms are distinct from the 5/6 technical-scene gate and its
+validated per-task Chamfer.
+
+**Acceptance impact:** five-view-set generation and manifest integrity
+PASS; human morphological inspection has found quality defects, so do not
+promote global prompt-fidelity/visual quality to PASS and do not merge PR
+#66 solely from these images. Native G1 normalizer ID/independent Blender
+reopen E2E still needs its actual non-skipped test output. Next, use the
+*exact pinned generator-visible prompts* to annotate criterion-level
+PASS/FAIL/UNKNOWN, compare independently rendered reference views under
+matched camera/lighting conditions, and classify deficiencies as schema
+coverage (e.g. missing curves/modifiers), generation semantics, or renderer
+shading issues before proposing safe changes. Retain visual artifacts
+privately; only non-sensitive review metadata belongs in the repo.
