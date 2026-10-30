@@ -96,7 +96,7 @@ def _opening_points(opening: dict, wall: dict) -> tuple[tuple[float,float],tuple
 
 
 def _near(actual, expected: tuple[float,float], *, label: str) -> None:
-    if (not all(math.isfinite(float(v)) for v in actual[:3])
+    if (not all(math.isfinite(float(actual[i])) for i in (0, 1, 2))
             or abs(float(actual[2]))>0.00001
             or abs(actual[0]-expected[0])>0.01
             or abs(actual[1]-expected[1])>0.01):
