@@ -171,9 +171,6 @@ def run(output: Path, public_root: Path, suite: Path, *,
             _write(folder / "scene-spec.json", spec)
             if not generation_only:
                 _build_and_reopen(binary, folder)
-                "--python-exit-code", "14", "--python", str(BUILDER),
-                "--", "--spec", str(folder / "scene-spec.json"), "--out", str(folder),
-            ], folder / "build.log", limit=180)
             if not generation_only:
                 record["native_scene"] = "PASS"
         except (LocalProviderError, ProviderError, UnsafeGeneratedCode,
