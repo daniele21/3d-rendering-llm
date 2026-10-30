@@ -27,7 +27,7 @@ def _safe_file(path: Path, root: Path) -> None:
         raise CatalogError(f"Missing or unsafe benchmark file: {path.name}")
 
 
-def discover(root: Path) -> list[dict]:
+def discover(root: Path, *, require_reference: bool = True) -> list[dict]:
     """Discover public descriptions without reading ground-truth factory content."""
     root = Path(root)
     if not root.is_dir() or root.is_symlink():
@@ -42,8 +42,12 @@ def discover(root: Path) -> list[dict]:
         prompt = directory / "prompt_description.txt"
         instruction = directory / "prompt_instruction.txt"
         reference = directory / (name + ".py")
-        for file in (prompt, instruction, reference):
+        for file in (prompt, instruction):
             _safe_file(file, root)
+        if require_reference:
+            # Legacy catalog checks reference existence but never reads its bytes.
+            # The public-only route independently checks the frozen suite hash.
+            _safe_file(reference, root)
         # Never read the factory or any reference image/mesh in this process.
         a, b = prompt.read_bytes(), instruction.read_bytes()
         if not a.strip() or not b.strip():
@@ -58,10 +62,11 @@ def discover(root: Path) -> list[dict]:
     return tasks
 
 
-def select(root: Path, revision: str, curated: dict | None = None) -> dict:
+def select(root: Path, revision: str, curated: dict | None = None,
+           *, require_reference: bool = True) -> dict:
     if not SHA.fullmatch(revision):
         raise CatalogError("Pin a real 40-hex Hugging Face dataset revision")
-    tasks = discover(root)
+    tasks = discover(root, require_reference=require_reference)
     ids = {task["task_id"] for task in tasks}
     ranked = sorted(ids, key=lambda task: (hashlib.sha256(
         ("3dcodebench-suite-v1:" + task).encode()).hexdigest(), task))
