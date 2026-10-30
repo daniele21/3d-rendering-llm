@@ -103,6 +103,39 @@ sending each request. Each result records the public privacy-filtered
 runtime identity, token counts, wall time, status and immutable source hashes.
 The public identity excludes raw local path, prompts and credentials.
 
+## 2a. Troubleshooting: Korgis requires llama-server build 10621+
+
+An actual operator startup attempt on 2026-10-30 found the model GGUF
+on disk (~17 GiB in `ls -lh`), then Korgis refused to start because
+`resolve_llama_server_binary` found no compatible standalone
+`llama-server`. **This is a pre-inference binary compatibility gate,
+not evidence of a bad model or insufficient RAM.** Korgis requires a
+`llama-server --version` showing attributable build/commit and build
+**10621 or newer**, and deliberately refuses older/unattributable builds.
+Do **not** enable `llama_server_allow_unvalidated` or reduce its floor.
+
+Use a current **standalone** Homebrew distribution of llama.cpp
+(not the `llama-cpp-python` wheel and not the Ollama binary):
+
+    brew install llama.cpp
+    # If already installed but old: brew upgrade llama.cpp
+    LLAMA_SERVER="$(brew --prefix llama.cpp)/bin/llama-server"
+    test -x "$LLAMA_SERVER" || { echo "llama-server missing"; exit 1; }
+    "$LLAMA_SERVER" --version 2>&1
+
+Verify the version output shows the required build and commit. From
+Korgis's normal Python environment, pass that exact executable via
+`--llama-server-bin "$LLAMA_SERVER"` on the `uv run --frozen local-llm
+serve ...` command, or export `LOCAL_LLM_SERVER_BIN="$LLAMA_SERVER"`
+in the Korgis terminal. Korgis does not bypass a failed compatibility
+check for an explicitly configured binary. Homebrew's llama.cpp
+formula includes `llama-server` and prebuilt Apple Silicon binaries.
+
+If `llama-server --version` still cannot be attributed, record the
+output and check that the selected executable and system architecture
+are correct. Do not infer that the weights were loaded if startup
+failed before backend construction.
+
 ## 3. Find the frozen generator-only public prompts
 
 The model side must receive ONLY
