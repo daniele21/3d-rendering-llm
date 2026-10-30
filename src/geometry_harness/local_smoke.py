@@ -1,4 +1,4 @@
-"""Private, no-egress Ollama vs Luna six-task smoke using frozen public prompts.
+"""Private, no-egress Korgis vs Luna six-task smoke using frozen public prompts.
 
 This is an experimental run, not official 3DCodeBench. Never executes
 model-authored Python. Runs the same restricted AST and trusted Blender
@@ -23,7 +23,7 @@ from geometry_harness.evaluation.benchmark_evidence import EXPECTED_IDS
 from geometry_harness.g1 import BUILDER, INSPECT, _safe_run
 from geometry_harness.providers.compatible import ProviderError
 from geometry_harness.providers.local import (
-    DEFAULT_MODEL, LocalProviderError, OllamaLocalCodeProvider,
+    DEFAULT_MODEL, LocalProviderError, KorgisLocalCodeProvider,
 )
 from geometry_harness.strategies.bpy_subset import compile_bpy_subset, UnsafeGeneratedCode
 
@@ -96,7 +96,7 @@ def _load_prompts(public_root: Path, suite_path: Path,
 
 def run(output: Path, public_root: Path, suite: Path, *,
         task_ids: tuple[str, ...] = EXPECTED_IDS,
-        provider: OllamaLocalCodeProvider | None = None) -> dict:
+        provider: KorgisLocalCodeProvider | None = None) -> dict:
     output, public_root, suite = (x.expanduser().resolve()
                                   for x in (output, public_root, suite))
     if output.exists():
@@ -108,7 +108,7 @@ def run(output: Path, public_root: Path, suite: Path, *,
     binary = blender_binary()
     if not binary:
         raise LocalSmokeError("Blender required for local model benchmark")
-    engine = provider or OllamaLocalCodeProvider()
+    engine = provider or KorgisLocalCodeProvider()
     output.mkdir(parents=True, mode=0o700)
     rows = []
     for task in task_ids:
@@ -125,6 +125,7 @@ def run(output: Path, public_root: Path, suite: Path, *,
             "input_tokens": None, "output_tokens": None,
             "llm_elapsed_seconds": None,
             "telemetry": None,
+            "runtime_identity": None,
             "normalized_mesh_names": None,
             "files": [],
         }
@@ -138,6 +139,8 @@ def run(output: Path, public_root: Path, suite: Path, *,
             record["output_tokens"] = response.output_tokens
             if getattr(engine, "last_telemetry", None) is not None:
                 record["telemetry"] = asdict(engine.last_telemetry)
+            if getattr(engine, "last_identity", None) is not None:
+                record["runtime_identity"] = engine.last_identity
             code_file = folder / "model-generated.py"
             code_file.write_text(response.code, encoding="utf-8")
             code_file.chmod(0o600)
@@ -185,16 +188,16 @@ def run(output: Path, public_root: Path, suite: Path, *,
         _write(folder / "result.json", record)
         rows.append(record)
     summary = {
-        "schema_version": 1, "experiment": "G1_LOCAL_QWEN_VS_LUNA_RESTRICTED_SMOKE",
+        "schema_version": 1, "experiment": "G1_KORGIS_QWEN_VS_LUNA_RESTRICTED_SMOKE",
         "source_sha": source_sha(),
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
-        "runtime": "ollama_loopback_only",
+        "runtime": "korgis_loopback_only",
         "model": engine.model,
         "model_params": {
             "context_tokens": engine.context_tokens,
             "max_output_tokens": engine.max_output_tokens,
             "temperature": engine.temperature, "seed": engine.seed,
-            "keep_alive": 0,
+            "model_residency": "managed_by_korgis",
         },
         "platform": platform.platform(), "dataset_revision": EXPECTED_REV,
         "task_ids": list(task_ids), "attempted": len(rows),
@@ -224,7 +227,7 @@ def main(argv=None) -> int:
     args = p.parse_args(argv)
     try:
         tasks = tuple(args.task) if args.task else EXPECTED_IDS
-        provider = OllamaLocalCodeProvider(
+        provider = KorgisLocalCodeProvider(
             model=args.model, context_tokens=args.num_ctx,
             max_output_tokens=args.num_predict,
         )
