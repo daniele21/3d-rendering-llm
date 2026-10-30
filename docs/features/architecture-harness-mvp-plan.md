@@ -102,3 +102,18 @@ Parallel **workstreams**: A fixtures & evidence, B CAD semantic model/import/exp
 - D0/E1 tool signature sketches/issues now, **no unsafe speculative implementation** until contracts tested.
 
 **Status updates** must distinguish `planned`, `code present`, `offline CI pass`, `real Mac E2E pass`, `human accepted`. Avoid treating documentation or synthetic fixture count as proof of a production-ready architecture application.
+
+
+## Execution tracker — first parallel wave (2026-10-30)
+
+| Stream | Issue | PR | Implemented and tested | Next gate |
+| --- | --- | --- | --- | --- |
+| A0 | [#69](https://github.com/daniele21/3d-rendering-llm/issues/69) | [#75](https://github.com/daniele21/3d-rendering-llm/pull/75) | Initial immutable registry of 10 synthetic tasks (4 import, 4 negative, 2 edit *registered only*), source SHA and scorer/model separation; offline CI green | Apply B0 parser to cases, implement expected edit oracles; reach 30 |
+| B0 | [#70](https://github.com/daniele21/3d-rendering-llm/issues/70) | [#76](https://github.com/daniele21/3d-rendering-llm/pull/76) | Strict PlanScene schema for mm walls and hosted openings, source/revision digest; offline CI green | Integrate C0 and read/write source DXF |
+| C0 | [#71](https://github.com/daniele21/3d-rendering-llm/issues/71) | [#77](https://github.com/daniele21/3d-rendering-llm/pull/77) | Pure math bounds, exact intersection decisions, explicit-room polygon validation; offline CI green | Bind to B0 and expand robust topology |
+| B1/ezdxf reuse | [#70](https://github.com/daniele21/3d-rendering-llm/issues/70) | [#78](https://github.com/daniele21/3d-rendering-llm/pull/78) | Optional MIT ezdxf 1.4.5 reader, actual pinned-package CI real DXF wall tests PASS; no custom generalized parser | DXF writer, semantic roundtrip, Mac native validation |
+| D0 transactional edits | [#72](https://github.com/daniele21/3d-rendering-llm/issues/72) | — | Contract specified only | Blocked by approved B0+C0 and DXF writer |
+| E agent tooling | [#73](https://github.com/daniele21/3d-rendering-llm/issues/73) | — | API and three-arm A/B specified only | Execution blocked by D0; no new Luna calls approved |
+
+All implementation PRs are draft and **stacked**, not merged. Do not claim full MVP, all 30 cases, spatial reconstruction, arbitrary DXF, semantics beyond registered types, native Mac edit, or user acceptance. Source code may change under review. The three independent first-wave tracks ran concurrently; B1 follows the B0 contract and uses an isolated optional dependency gate.
+
