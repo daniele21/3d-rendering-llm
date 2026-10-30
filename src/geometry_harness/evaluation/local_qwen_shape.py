@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -93,6 +94,24 @@ def _verify_external_scorer(upstream: Path, refs: Path) -> tuple[Path, dict]:
     return scorer, meta
 
 
+def _expected_native_mesh_ids(measured: dict) -> dict:
+    """Bind Blender export to the independently reopened, SHA-verified IDs."""
+    rows = measured.get("mesh_objects")
+    if (measured.get("passed") is not True or not isinstance(rows, list)
+            or not 1 <= len(rows) <= 48):
+        raise ShapeGateError("Independent Blender inspection lacks validated meshes")
+    names = [r.get("name") for r in rows if isinstance(r, dict)]
+    stable = [r.get("geometry_id") for r in rows if isinstance(r, dict)]
+    if (len(names) != len(rows) or len(set(names)) != len(names)
+            or any(type(x) is not str or not x for x in names)
+            or len(stable) != len(rows) or len(set(stable)) != len(stable)
+            or any(type(x) is not str or not re.fullmatch(r"mesh_[0-9]{3}", x)
+                   for x in stable)):
+        raise ShapeGateError("Normalized scene has missing or ambiguous stable mesh IDs")
+    return {"object_ids": names,
+            "object_geometry_ids": dict(zip(names, stable))}
+
+
 def run(stage: Path, baseline: Path, derived: Path, upstream: Path,
         refs: Path, out: Path, *, binary: str | None = None) -> dict:
     stage, baseline, derived, upstream, refs, out = (
@@ -154,15 +173,20 @@ def run(stage: Path, baseline: Path, derived: Path, upstream: Path,
         target.mkdir(parents=True)
         measured=_read(geometry)
         expected=target/"expected.json"
-        expected.write_text(json.dumps({
-            "object_ids":[x["name"] for x in measured["mesh_objects"]],
-        }))
+        expected.write_text(json.dumps(_expected_native_mesh_ids(measured),
+                                       sort_keys=True) + "\n", encoding="utf-8")
         glb=target/f"{task}.glb"
-        _safe_run([
-            executable,"-b",str(scene),"--disable-autoexec",
-            "--python-exit-code","14","--python",str(EXPORT),
-            "--","--out",str(glb),"--expected",str(expected)
-        ],target/"export.log",limit=120)
+        try:
+            _safe_run([
+                executable,"-b",str(scene),"--disable-autoexec",
+                "--python-exit-code","14","--python",str(EXPORT),
+                "--","--out",str(glb),"--expected",str(expected)
+            ],target/"export.log",limit=120)
+        except ShowcaseError as exc:
+            raise ShapeGateError(
+                f"GLB exporter failed for {task}; inspect the private log "
+                f"{target / 'export.log'}"
+            ) from exc
         if not glb.is_file() or glb.read_bytes()[:4]!=b"glTF":
             raise ShapeGateError("GLB export failed: no synthetic fallback")
         score=_score_one(scorer,refs,out/"scoring"/task,task,glb,model=DEFAULT_MODEL)
