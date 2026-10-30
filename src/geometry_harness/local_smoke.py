@@ -34,6 +34,26 @@ class LocalSmokeError(ValueError):
     pass
 
 
+def _build_and_reopen(binary: str, folder: Path) -> None:
+    """Blender stage: only trusted repository scripts, never model code."""
+    _safe_run([
+        binary, "-b", "--factory-startup", "--disable-autoexec",
+        "--python-exit-code", "14", "--python", str(BUILDER),
+        "--", "--spec", str(folder / "scene-spec.json"), "--out", str(folder),
+    ], folder / "build.log", limit=180)
+    _safe_run([
+        binary, "-b", str(folder / "scene.blend"), "--disable-autoexec",
+        "--python-exit-code", "14", "--python", str(INSPECT),
+        "--", "--spec", str(folder / "scene-spec.json"),
+        "--output", str(folder / "geometry.json"),
+    ], folder / "inspect.log", limit=180)
+    geometry = json.loads((folder / "geometry.json").read_text(encoding="utf-8"))
+    if geometry.get("passed") is not True:
+        raise LocalSmokeError("Independent native Blender geometry failed")
+    png_dimensions(folder / "preview.png")
+
+
+
 def _write(path: Path, value: dict) -> None:
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     path.chmod(0o600)
@@ -96,7 +116,8 @@ def _load_prompts(public_root: Path, suite_path: Path,
 
 def run(output: Path, public_root: Path, suite: Path, *,
         task_ids: tuple[str, ...] = EXPECTED_IDS,
-        provider: KorgisLocalCodeProvider | None = None) -> dict:
+        provider: KorgisLocalCodeProvider | None = None,
+        generation_only: bool = False) -> dict:
     output, public_root, suite = (x.expanduser().resolve()
                                   for x in (output, public_root, suite))
     if output.exists():
@@ -105,8 +126,8 @@ def run(output: Path, public_root: Path, suite: Path, *,
         raise LocalSmokeError("Choose unique frozen six-task IDs")
     # Validate all requested inputs and all prompt hashes before any request.
     prompts = _load_prompts(public_root, suite, task_ids)
-    binary = blender_binary()
-    if not binary:
+    binary = None if generation_only else blender_binary()
+    if not generation_only and not binary:
         raise LocalSmokeError("Blender required for local model benchmark")
     engine = provider or KorgisLocalCodeProvider()
     output.mkdir(parents=True, mode=0o700)
@@ -148,22 +169,13 @@ def run(output: Path, public_root: Path, suite: Path, *,
             record["safe_source"] = "PASS"
             record["normalized_mesh_names"] = spec["name_normalization"]["changes"]
             _write(folder / "scene-spec.json", spec)
-            _safe_run([
-                binary, "-b", "--factory-startup", "--disable-autoexec",
+            if not generation_only:
+                _build_and_reopen(binary, folder)
                 "--python-exit-code", "14", "--python", str(BUILDER),
                 "--", "--spec", str(folder / "scene-spec.json"), "--out", str(folder),
             ], folder / "build.log", limit=180)
-            _safe_run([
-                binary, "-b", str(folder / "scene.blend"), "--disable-autoexec",
-                "--python-exit-code", "14", "--python", str(INSPECT),
-                "--", "--spec", str(folder / "scene-spec.json"),
-                "--output", str(folder / "geometry.json"),
-            ], folder / "inspect.log", limit=180)
-            geometry = json.loads((folder / "geometry.json").read_text(encoding="utf-8"))
-            if geometry.get("passed") is not True:
-                raise LocalSmokeError("Independent native Blender geometry failed")
-            png_dimensions(folder / "preview.png")
-            record["native_scene"] = "PASS"
+            if not generation_only:
+                record["native_scene"] = "PASS"
         except (LocalProviderError, ProviderError, UnsafeGeneratedCode,
                 LocalSmokeError, ShowcaseError, ValueError, TypeError, OSError) as exc:
             record["error_class"] = type(exc).__name__
@@ -189,6 +201,7 @@ def run(output: Path, public_root: Path, suite: Path, *,
         rows.append(record)
     summary = {
         "schema_version": 1, "experiment": "G1_KORGIS_QWEN_VS_LUNA_RESTRICTED_SMOKE",
+        "phase": "GENERATION_ONLY_REQUIRES_LATER_BLENDER" if generation_only else "GENERATE_AND_VALIDATE",
         "source_sha": source_sha(),
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
         "runtime": "korgis_loopback_only",
@@ -224,6 +237,8 @@ def main(argv=None) -> int:
     p.add_argument("--model", default=DEFAULT_MODEL)
     p.add_argument("--num-ctx", type=int, default=8192)
     p.add_argument("--num-predict", type=int, default=4096)
+    p.add_argument("--generate-only", action="store_true",
+                   help="Generate and safe-compile only; stop Korgis before separate Blender validation")
     args = p.parse_args(argv)
     try:
         tasks = tuple(args.task) if args.task else EXPECTED_IDS
@@ -232,7 +247,8 @@ def main(argv=None) -> int:
             max_output_tokens=args.num_predict,
         )
         report = run(args.out, args.public_root, args.suite,
-                     task_ids=tasks, provider=provider)
+                     task_ids=tasks, provider=provider,
+                     generation_only=args.generate_only)
     except (LocalSmokeError, LocalProviderError, ValueError, OSError) as exc:
         print(f"Local smoke rejected: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 2
@@ -241,7 +257,8 @@ def main(argv=None) -> int:
         for key in ("model", "task_ids", "attempted", "native_pass",
                     "safe_source_pass", "new_model_calls", "api_cost_usd")
     }, indent=2))
-    return 0 if report["native_pass"] == len(tasks) else 1
+    return 0 if (report["safe_source_pass"] == len(tasks) if args.generate_only
+                 else report["native_pass"] == len(tasks)) else 1
 
 
 if __name__ == "__main__":
