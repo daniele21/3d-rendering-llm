@@ -171,8 +171,8 @@ class LocalSmokeTests(unittest.TestCase):
                 if "build_safe_scene.py" in " ".join(map(str,cmd)):
                     (folder/"scene.blend").write_bytes(b"BLENDER")
                     (folder/"preview.png").write_bytes(
-                        b"\\x89PNG\\r\\n\\x1a\\n" + b"\\x00"*8 +
-                        b"\\x00\\x00\\x03\\x20" + b"\\x00\\x00\\x02\\x58"
+                        b"\x89PNG\r\n\x1a\n" + b"\x00"*8 +
+                        b"\x00\x00\x03\x20" + b"\x00\x00\x02\x58"
                     )
                 else:
                     (folder/"geometry.json").write_text(json.dumps({"passed":True}))
