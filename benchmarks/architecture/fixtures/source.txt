@@ -1,0 +1,1 @@
+synthetic architecture_mvp_v1 5000x4000mm fixture, not a CAD input
