@@ -113,9 +113,12 @@ def _write_json(path: Path, data: dict):
 
 
 def run_move_door(source_path: Path, patch: dict, out: Path) -> dict:
-    source_path=Path(source_path).expanduser().resolve()
+    supplied=Path(source_path).expanduser()
+    if supplied.is_symlink():
+        raise CADPatchReject("Symlinked input plan is not authorized")
+    source_path=supplied.resolve()
     out=Path(out).expanduser().resolve()
-    if out.exists() or source_path.is_symlink() or not source_path.is_file():
+    if out.exists() or not source_path.is_file():
         raise CADPatchReject("Original regular plan required and fresh output directory")
     if out==source_path.parent or out.is_relative_to(source_path.parent) and out.name==source_path.name:
         raise CADPatchReject("Output cannot alias original source file")
