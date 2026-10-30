@@ -4,10 +4,12 @@ on:
   push:
     branches:
       - feature/architecture-b1-ezdxf-adapter
+      - feature/architecture-w2-dxf-edit-transaction
   pull_request:
     paths:
       - 'src/geometry_harness/domains/architecture/**'
       - 'tests/test_architecture_ezdxf_adapter.py'
+      - 'tests/test_architecture_dxf_transaction.py'
       - '.github/workflows/architecture-ezdxf-adapter.yml'
 
 permissions:
@@ -39,3 +41,5 @@ jobs:
         run: |
           python -m unittest discover -s tests -p 'test_architecture_ezdxf_adapter.py' -v
           python -m unittest discover -s tests -p 'test_architecture_plan_schema.py' -v
+          python -m unittest discover -s tests -p 'test_architecture_geometry_math.py' -v
+          python -m unittest discover -s tests -p 'test_architecture_dxf_transaction.py' -v
