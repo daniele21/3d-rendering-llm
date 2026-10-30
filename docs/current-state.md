@@ -23,6 +23,22 @@ new paid Luna calls were made. Real Mac native normalizer E2E and human
 prompt/reference visual validation remain open. See
 [full measured protocol](features/g1-native-name-normalization-and-five-scene-scoring.md).
 
+**Operator four-view review (2026-10-30, PR #66 feature branch):**
+The supplied private five-scene ZIP contains **20/20 valid 640x480 Workbench
+PNG views**, correctly matched by five SHA-256/size manifests from Blender
+5.2.3 LTS. Mesh counts: AquariumTank 22, ArmChair 15, Bottle 16,
+Balloon 15, CoffeeTable 8. Qualitative four-view inspection confirms
+recognizable primitives for AquariumTank, ArmChair, Bottle and CoffeeTable
+with simplifications, but **Balloon's inflated letters are fragmented into
+disconnected-looking ellipsoids**; AquariumTank's cactus is hard to recognize,
+ArmChair lacks curved upholstery and Bottle has a stepwise rather than
+smoothly tapered form. Low normalized Chamfer does not establish prompt or
+visual fidelity. Workbench cannot validate transparent glass or other PBR
+effects. This review is *not* an independent reference-image matching score;
+prompt-criterion quality and exact reference matching are still OPEN.
+The private uploaded ZIP contained no G1 name normalizer native E2E log, so
+that gate remains OPEN. See [full review](features/g1-native-name-normalization-and-five-scene-scoring.md).
+
 ## Evidence already generated
 
 | Capability | Gate | Proof |
