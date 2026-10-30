@@ -146,16 +146,59 @@ scripts to the generator.
     find "$HOME/geometry-evidence" "$HOME/Projects" \
       \( -name staging-manifest.json -o -name '*suites*.json' \) -print
 
-Use the generator prompt root containing
-`staging-manifest.json` and six `<task>/prompt_description.txt` plus
-the associated **full suite** JSON created by
-`benchmarks/catalog/select_suites.py` (not the compact
-`benchmarks/catalog/real_smoke_v1.json`). The harness validates
-the suite SHA and both public prompt hashes for every selected task
-before making *any* inference request. If the original stage/suite are
-not available locally, recover or re-stage **only** those frozen public
-texts from the pinned dataset. Do not fabricate a new suite or use a
-different dataset revision.
+The operator's initial `find` on 2026-10-30 found *only unrelated ASR
+suite JSON files*: neither the original Luna staging manifest nor the full
+3DCodeBench suite were present in those searched locations. Do NOT point
+the geometry benchmark at the ASR suites.
+
+If the original stage/suite have been moved or removed, the repository now
+contains `benchmarks/catalog/freeze_public_only.py`. It downloads **only**
+the two **public text prompts** for each of 212 category IDs at the pinned
+dataset revision (never source factories, reference media or GLBs),
+reconstructs the complete suite in a temporary restricted workspace,
+requires it to hash **exactly**
+`79904d4e83e9075cd08337a99c28d5dbcc00743cc790d37123ed9b7c776a7cd8`,
+then writes twelve public smoke prompt files and the exact historical
+`suite.json`. It cannot silently switch dataset or selection.
+
+**Run this preparation while Korgis is stopped**, to preserve RAM:
+
+    cd ~/Projects/3d-rendering-llm
+    git fetch origin
+    git switch feature/g1-ollama-32gb-smoke
+    git pull --ff-only
+
+    uv run --no-project --with "huggingface_hub>=0.30,<2" \
+      python benchmarks/catalog/freeze_public_only.py \
+        --output "$HOME/geometry-evidence/frozen-luna-public-only-01"
+
+    export PUBLIC_ROOT="$HOME/geometry-evidence/frozen-luna-public-only-01/generator-public-smoke"
+    export SUITE="$HOME/geometry-evidence/frozen-luna-public-only-01/suite.json"
+    shasum -a 256 "$SUITE"
+
+The resulting suite hash **must** match the above; otherwise the
+tool fails before staging. No model requests occur, and no model API
+keys are used. No hidden reference scripts or geometry assets enter
+the generator workspace. Set `PUBLIC_ROOT` and `SUITE` in the later
+geometry terminal; they are not automatically exported by Korgis.
+This is the historical **frozen original task text**, *not* a different
+benchmark.
+
+Before running inference, check RAM while the server is loaded and
+while it is stopped:
+
+    memory_pressure -Q
+    sysctl vm.swapusage
+
+The first observed Korgis status was 16% free memory with 15 GiB swap
+already used. High swap *alone* is not proof of active thrashing or
+bad hardware fit; observe performance and swap **growth** over time.
+Close heavy unrelated processes; if pressure remains consistently high,
+stop and do not start two tasks until the Mac is stable. Explicit
+`n_gpu_layers=-1` is a configuration intent, not independently
+verified full GPU residency. The model GGUF identity was
+`evidence_grade=partial` with `artifact_digest=null`; record a
+private SHA-256 of the GGUF before evidence-grade comparisons.
 
 ## 4. Run an isolated generation-only 2-task smoke
 
