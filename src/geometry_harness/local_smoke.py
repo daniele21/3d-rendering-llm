@@ -18,7 +18,7 @@ import sys
 import time
 
 from geometry_harness.benchmark_smoke import CONTRACT, EXPECTED_REV
-from geometry_harness.cli import blender_binary, png_dimensions, sha256, source_sha
+from geometry_harness.cli import ShowcaseError, blender_binary, png_dimensions, sha256, source_sha
 from geometry_harness.evaluation.benchmark_evidence import EXPECTED_IDS
 from geometry_harness.g1 import BUILDER, INSPECT, _safe_run
 from geometry_harness.providers.compatible import ProviderError
@@ -162,7 +162,7 @@ def run(output: Path, public_root: Path, suite: Path, *,
             png_dimensions(folder / "preview.png")
             record["native_scene"] = "PASS"
         except (LocalProviderError, ProviderError, UnsafeGeneratedCode,
-                LocalSmokeError, ValueError, TypeError, OSError) as exc:
+                LocalSmokeError, ShowcaseError, ValueError, TypeError, OSError) as exc:
             record["error_class"] = type(exc).__name__
             if record["provider_status"] == "NOT_RUN":
                 record["provider_status"] = "FAILED"
