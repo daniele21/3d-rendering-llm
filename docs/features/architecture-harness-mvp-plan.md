@@ -149,7 +149,9 @@ Three independent implementation branches and one dependent scoring branch are o
 
 Mac mini W3 on existing central WIF-restricted workflow:
 - [Original run #41166161277](https://github.com/daniele21/local-runner-infra/actions/runs/41166161277) failed in environment setup: default Python 3.15 lacked a prebuilt Shapely 2.1.2 arm64 wheel; source compilation failed. **Not a geometric/scorer failure.**
-- [Retry #41166243859](https://github.com/daniele21/local-runner-infra/actions/runs/41166243859) is requested with Python 3.11 compatibility and `pip --only-binary=:all:`. Until the actual logs and GCS upload proof succeed, Mac W3 and private GCS remain **PENDING**, not PASS.
+- [Verified retry #41166243859](https://github.com/daniele21/local-runner-infra/actions/runs/41166243859) **SUCCESS**: `uv` installed Python 3.11.17; prebuilt macOS ARM64 wheel Shapely 2.1.2 and ezdxf 1.4.5 installed; separate real Mac tests for topology, supervised DXF, bounded agent proposals and paired replay all passed. Exact source branches were SHA-verified. Private GCS upload succeeded, five files independently checked (`w3-evidence.json` and four per-stage test logs). Zero inference and no partner CAD.
 - No W3 model calls; no private studio CAD used. W2 real Mac successful synthetic +300mm door edit remains separate evidence in run #41112527806.
+
+**Private W3 evidence prefix:** `gs://project-tests-498508-geometry-showcase/geometry-harness/architecture-w3/7130e3f3efecd1cc40edb2bc0d1cb2acf0d6bd00/41166243859-attempt-1/run-41166243859-attempt-1/`. Mac test result is evidence of code/library behavior only. Qwen/Luna model inference remains **NOT RUN** for CAD; paired replay labels are unverified by design.
 
 **Next blockers**: production-reviewed source-to-semantic mapping of real unannotated DXF symbols (not just lines), host/user approval for agent commits, live Qwen model-identity and memory/latency gate, optional explicitly budgeted Luna paired run, independent real studio review, and typed 2D-to-3D/BIM adapter. Do not merge W3 branches into main before reviewed dependency order or confuse simulated scorer responses with model performance.
