@@ -134,3 +134,22 @@ The first **real self-hosted Mac mini** synthetic CAD edit E2E passed at [centra
 GCS authenticated using the existing workflow-restricted WIF binding, **12 files uploaded**, required evidence verified. Private artifact prefix: `gs://project-tests-498508-geometry-showcase/geometry-harness/architecture-w2/2d8b3f38b7109ea6b0f1c334a1b05b59608f7da1/41112527806-attempt-1/run-41112527806-attempt-1/`. Only links and metadata are committed; no DXFs/blends in the repo. Earlier failed runs remain in Actions as honest diagnosis: initial `ezdxf.Vec3` slicing mismatch, then missing copied C0 test module; both resolved before the PASS.
 
 **Still open:** arbitrary real DXF walls + opening extraction / layer mapping, writeback to unannotated source CAD while preserving unfamiliar entities, IFC, 2D-to-3D Blender E2E, rule-based clearances beyond bounded subset, Shapely integration, actual partner authorization and acceptance, agent mutation tools, and Qwen/Luna CAD A/B. This is one synthetic vertical slice, not an architecture studio-ready product.
+
+
+## W3 — geometry-library reuse, supervised import and AI evaluation (2026-10-31)
+
+Three independent implementation branches and one dependent scoring branch are open as **draft PRs**:
+
+| Track | PR | Source commit | Evidence/gate |
+| --- | --- | --- | --- |
+| C1 Shapely/GEOS conservative topology | [#81](https://github.com/daniele21/3d-rendering-llm/pull/81) | `d1909a887f9cfa077766ee8382daf604f7057ace` | Shapely 2.1.2 real-package GitHub CI PASS. Wall overlapping centerlines=FAIL; ambiguous interior crosses and T-junctions=UNKNOWN; shared endpoints=PASS. No inferred rooms or code compliance. |
+| B2 unannotated DXF supervised host mapping | [#82](https://github.com/daniele21/3d-rendering-llm/pull/82) | `d19f766894826749a76595e89679da22329b8838` | ezdxf 1.4.5 real DXF GitHub CI PASS. Operator must supply exact source SHA + host wall for every LINE opening; geometry is checked, but all entities remain locked and mapping status requires human confirmation. No freeform blocks, DWG or unknown entities. |
+| E1 model-facing typed proposal gateway | [#83](https://github.com/daniele21/3d-rendering-llm/pull/83) | `990545d6450d9de632a2ca46408024f8562f5ac2` | Offline CI PASS. Four model-visible tools: summary/inspect/constraints/propose; proposals bound to actual source revision and D0 dry-run; no model-visible commit, no automatic CAD mutation. |
+| E2 paired CAD replay scorer | [#84](https://github.com/daniele21/3d-rendering-llm/pull/84) | `7130e3f3efecd1cc40edb2bc0d1cb2acf0d6bd00` | Unit CI PASS. Hidden scorer oracle separated from prompt, both model-labelled responses required per task, failed outcomes counted. **Replay-only; unverified model identity. No actual Qwen/Luna inference or quality claim.** |
+
+Mac mini W3 on existing central WIF-restricted workflow:
+- [Original run #41166161277](https://github.com/daniele21/local-runner-infra/actions/runs/41166161277) failed in environment setup: default Python 3.15 lacked a prebuilt Shapely 2.1.2 arm64 wheel; source compilation failed. **Not a geometric/scorer failure.**
+- [Retry #41166243859](https://github.com/daniele21/local-runner-infra/actions/runs/41166243859) is requested with Python 3.11 compatibility and `pip --only-binary=:all:`. Until the actual logs and GCS upload proof succeed, Mac W3 and private GCS remain **PENDING**, not PASS.
+- No W3 model calls; no private studio CAD used. W2 real Mac successful synthetic +300mm door edit remains separate evidence in run #41112527806.
+
+**Next blockers**: production-reviewed source-to-semantic mapping of real unannotated DXF symbols (not just lines), host/user approval for agent commits, live Qwen model-identity and memory/latency gate, optional explicitly budgeted Luna paired run, independent real studio review, and typed 2D-to-3D/BIM adapter. Do not merge W3 branches into main before reviewed dependency order or confuse simulated scorer responses with model performance.
