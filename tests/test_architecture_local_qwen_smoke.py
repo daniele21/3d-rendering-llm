@@ -101,6 +101,9 @@ class ProviderContractTests(unittest.TestCase):
         self.assertFalse(evaluate_response(tasks[0],review)["correct"])
         self.assertTrue(evaluate_response(tasks[1],review)["correct"])
         self.assertFalse(evaluate_response(tasks[2],review)["correct"])
+        # LLM-controlled JSON types must not crash the evaluator.
+        malformed='{"schema_version":1,"decision":"review_required","reason_code":[]}'
+        self.assertFalse(evaluate_response(tasks[1],malformed)["correct"])
         public_prompt=frozen_public_prompt({"instruction":tasks[0]["instruction"],
                                             "plan":tasks[0]["plan"]})
         self.assertIn("query_constraints",public_prompt)
