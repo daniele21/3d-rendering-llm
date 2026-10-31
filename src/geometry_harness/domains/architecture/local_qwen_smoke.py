@@ -164,8 +164,13 @@ def execute(out: Path, *, preflight_only: bool, provider=None) -> dict:
         identity=q.preflight()
         _write(out/"model-identity.json",identity)
     except (LocalCADProviderReject,ValueError,OSError) as exc:
+        # The provider exception strings are fixed/sanitized in korgis_cad.py;
+        # never serialize raw HTTP content, paths or tracebacks to CI logs.
         report={"experiment":EXPERIMENT,"status":"BLOCKED_MODEL_NOT_RESIDENT_OR_IDENTITY_DRIFT",
-                "error_class":type(exc).__name__,"model_calls":0,
+                "error_class":type(exc).__name__,
+                "error_code":str(exc) if isinstance(exc,LocalCADProviderReject)
+                              else "LOCAL_PREFLIGHT_FAILED",
+                "model_calls":0,
                 "task_count":len(cases),"model":MODEL,"source":"synthetic_only"}
         _write(out/"run-report.json",report)
         _inventory(out)
@@ -249,7 +254,7 @@ def main(argv=None):
         return 2
     print(json.dumps({
         k:data.get(k) for k in ("status","model","task_count","model_calls",
-                                "model_attempts","provider_completed","correct","accuracy")
+                                "model_attempts","provider_completed","correct","accuracy","error_code")
     },sort_keys=True))
     return 0 if data["status"] in {
         "PREFLIGHT_OK_MODEL_RESIDENT","EXECUTED_REAL_LOCAL_PROVIDER_WITH_FAILURES_RECORDED"
