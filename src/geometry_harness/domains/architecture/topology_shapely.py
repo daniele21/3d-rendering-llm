@@ -61,8 +61,22 @@ def assess_plan_topology(plan: dict) -> dict:
                 code="INTERIOR_WALL_INTERSECTION_REVIEW"
                 status="UNKNOWN"
             elif left.touches(right):
-                code="WALL_ENDPOINT_JUNCTION"
-                status="PASS"
+                # GEOS touches() also returns true for a T-junction: an
+                # endpoint of one line touching the *interior* of another.
+                # Such junctions require a human classification; only an
+                # endpoint shared by BOTH segments is unambiguous here.
+                def is_endpoint(line):
+                    from shapely.geometry import Point
+                    coords=list(line.coords)
+                    return (intersection.geom_type=="Point" and
+                            any(intersection.distance(Point(end)) <= TOLERANCE_MM
+                                for end in (coords[0],coords[-1])))
+                if is_endpoint(left) and is_endpoint(right):
+                    code="WALL_ENDPOINT_JUNCTION"
+                    status="PASS"
+                else:
+                    code="WALL_T_JUNCTION_REVIEW"
+                    status="UNKNOWN"
             else:
                 # A T junction can be a valid load-bearing/partition
                 # connection. We know geometry, not engineering intent.
