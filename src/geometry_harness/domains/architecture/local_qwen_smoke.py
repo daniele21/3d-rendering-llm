@@ -96,7 +96,8 @@ def _intent(response: str) -> tuple[str,dict | None]:
     if type(parsed) is dict and set(parsed)=={
         "schema_version","decision","reason_code"
     } and type(parsed["schema_version"]) is int and parsed["schema_version"]==1 and (
-        parsed["decision"]=="review_required" and
+        type(parsed["decision"]) is str and parsed["decision"]=="review_required" and
+        type(parsed["reason_code"]) is str and
         parsed["reason_code"] in {"STRUCTURAL_UNKNOWN","LOCKED_ENTITY","AMBIGUOUS_TARGET"}):
         return "REVIEW_REQUESTED",parsed
     return "PATCH_ATTEMPT",parsed if type(parsed) is dict else None
