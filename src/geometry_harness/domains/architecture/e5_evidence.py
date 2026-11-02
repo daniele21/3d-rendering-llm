@@ -27,6 +27,11 @@ GCS_RELATIVE = (
 MAX_BUNDLE_BYTES = 3_000_000
 SHA_PATTERN = re.compile(r"[0-9a-f]{64}\Z")
 TASK_ID = "arch_move_door_300"
+# Independent SHA-only observation from original authenticated Mac/GCS read:
+# https://github.com/daniele21/local-runner-infra/actions/runs/41399471418
+ORIGINAL_INVENTORY_SHA256 = "440fc9f57b27ec22fbe38db3d4c563379bb01861f6615a7e99aea9a8febbce82"
+ORIGINAL_DOOR_RESPONSE_SHA256 = "e77fd316f84d7290ab717c4ec6516743e2e78842bcc17591ea51894be76aba16"
+
 
 
 class E5EvidenceReject(ValueError):
@@ -74,7 +79,7 @@ def _safe_path(root: Path, relative: str) -> Path:
     return absolute
 
 
-def verified_e3_bundle(root: Path) -> dict:
+def _verify_e3_bundle_structure(root: Path) -> dict:
     """Verify every expected E3 output byte against its original manifest.
 
     The root must have been obtained independently by an authorized operator.
@@ -229,3 +234,18 @@ def verified_e3_bundle(root: Path) -> dict:
         "tasks": rows,
         "bundle_inventory_sha256": _sha((path / "artifact-inventory.json").read_bytes()),
     }
+
+def verified_e3_bundle(root: Path) -> dict:
+    """Accept only byte-identical E3 archive anchored by independent GCS read.
+
+    The original SHA-only observation was captured from the fixed private
+    source namespace on Mac run 41399471418. This proves content identity
+    to that observation; the original full GGUF digest remains unverified.
+    """
+    report = _verify_e3_bundle_structure(root)
+    if (report["bundle_inventory_sha256"] != ORIGINAL_INVENTORY_SHA256 or
+            report["tasks"][TASK_ID]["response_sha256"] != ORIGINAL_DOOR_RESPONSE_SHA256):
+        raise E5EvidenceReject("Original authenticated GCS content SHA anchor mismatch")
+    report["original_content_sha_anchor_verified"] = True
+    report["source_anchor_observation_run_id"] = 41399471418
+    return report
