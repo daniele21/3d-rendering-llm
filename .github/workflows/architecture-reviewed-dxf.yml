@@ -1,0 +1,32 @@
+name: Architecture B2 supervised DXF semantics
+on:
+  push:
+    branches: [feature/architecture-b2-reviewed-dxf-map]
+  pull_request:
+    paths:
+      - "src/geometry_harness/domains/architecture/importer_reviewed.py"
+      - "tests/test_architecture_importer_reviewed.py"
+      - ".github/workflows/architecture-reviewed-dxf.yml"
+permissions:
+  contents: read
+jobs:
+  real-unannotated-dxf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pinned mature DXF reader
+        run: |
+          python -m pip install --disable-pip-version-check 'ezdxf==1.4.5'
+          python -c 'from importlib.metadata import version; assert version("ezdxf")=="1.4.5"'
+      - name: Test source-bound review, no model inference
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m unittest discover -s tests -p 'test_architecture_importer_reviewed.py' -v
+          python -m unittest discover -s tests -p 'test_architecture_plan_schema.py' -v
