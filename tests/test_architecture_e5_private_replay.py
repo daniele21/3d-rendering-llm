@@ -13,7 +13,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 from geometry_harness.domains.architecture.e5_evidence import (
-    E5EvidenceReject, verified_e3_bundle, TASK_ID,
+    E5EvidenceReject, verified_e3_bundle, _verify_e3_bundle_structure, TASK_ID,
 )
 from geometry_harness.domains.architecture.e5_replay import execute as e5_execute
 from geometry_harness.domains.architecture.local_qwen_smoke import execute as e3_execute
@@ -51,6 +51,9 @@ def make_fake(root):
     assert fake.calls == 3 and report["correct"] == 3
     return root
 
+def fake_integrity_for_test(root):
+    return _verify_e3_bundle_structure(root)
+
 def rehash_manifest(root):
     """Simulate an attacker able to rewrite a self-consistent local bundle."""
     p=root/"artifact-inventory.json"
@@ -65,13 +68,17 @@ class EvidenceGateTests(unittest.TestCase):
     def test_entire_fake_bundle_has_integrity_not_external_provenance(self):
         with TemporaryDirectory() as tmp:
             root=make_fake(Path(tmp)/"private-e3")
-            r=verified_e3_bundle(root)
+            with self.assertRaisesRegex(E5EvidenceReject,"Original authenticated"):
+                verified_e3_bundle(root)
+            r=fake_integrity_for_test(root)
             self.assertTrue(r["file_integrity_verified"])
             self.assertFalse(r["read_source_authenticated"])
             self.assertFalse(r["gguf_full_digest_verified"])
             self.assertEqual(r["historical_run_id_claim"],41395270059)
             self.assertEqual(r["tasks"][TASK_ID]["response"],EDIT)
-            summary=e5_execute(root,mode="inspect")
+            with patch("geometry_harness.domains.architecture.e5_replay.verified_e3_bundle",
+                       side_effect=fake_integrity_for_test):
+                summary=e5_execute(root,mode="inspect")
             self.assertEqual(summary["new_offset_mm"],1500)
             self.assertEqual(summary["old_offset_mm"],1200)
             self.assertEqual(summary["host_structural_status"],"non_load_bearing")
@@ -83,10 +90,10 @@ class EvidenceGateTests(unittest.TestCase):
             raw=root/"tasks"/TASK_ID/"raw-response.txt"
             raw.write_text('{"schema_version":1,"operation_type":"move_door","target_id":"door_001","delta_mm":400}')
             with self.assertRaises(E5EvidenceReject):
-                verified_e3_bundle(root)
+                fake_integrity_for_test(root)
             rehash_manifest(root)
             with self.assertRaisesRegex(E5EvidenceReject,"Task response"):
-                verified_e3_bundle(root)
+                fake_integrity_for_test(root)
 
     def test_modified_private_oracle_or_frozen_prompt_rejected(self):
         for target in ("protocol.json","tasks/arch_locked_wall/public-prompt.txt"):
@@ -101,20 +108,20 @@ class EvidenceGateTests(unittest.TestCase):
                     path.write_text("fake prompt")
                 rehash_manifest(root)
                 with self.assertRaises(E5EvidenceReject):
-                    verified_e3_bundle(root)
+                    fake_integrity_for_test(root)
 
     def test_missing_extra_or_symlinked_file_denied(self):
         with TemporaryDirectory() as tmp:
             root=make_fake(Path(tmp)/"private-e3")
             (root/"injected.txt").write_text("extra")
             with self.assertRaises(E5EvidenceReject):
-                verified_e3_bundle(root)
+                fake_integrity_for_test(root)
             (root/"injected.txt").unlink()
             replaced=root/"tasks"/TASK_ID/"raw-response.txt"
             replaced.unlink()
             replaced.symlink_to(root/"protocol.json")
             with self.assertRaises(E5EvidenceReject):
-                verified_e3_bundle(root)
+                fake_integrity_for_test(root)
 
     def test_noninteractive_commit_fails_without_output(self):
         with TemporaryDirectory() as tmp:
@@ -122,14 +129,16 @@ class EvidenceGateTests(unittest.TestCase):
             out=Path(tmp)/"committed"
             with patch("geometry_harness.domains.architecture.e5_replay.sys.stdin") as stdin:
                 stdin.isatty.return_value=False
-                with self.assertRaisesRegex(CADPatchReject,"Non-interactive"):
-                    e5_execute(root,mode="commit",out=out)
+                with patch("geometry_harness.domains.architecture.e5_replay.verified_e3_bundle",
+                           side_effect=fake_integrity_for_test):
+                    with self.assertRaisesRegex(CADPatchReject,"Non-interactive"):
+                        e5_execute(root,mode="commit",out=out)
             self.assertFalse(out.exists())
 
     def test_negative_review_cases_never_reach_mutation_gateway(self):
         with TemporaryDirectory() as tmp:
             root=make_fake(Path(tmp)/"private-e3")
-            records=verified_e3_bundle(root)["tasks"]
+            records=fake_integrity_for_test(root)["tasks"]
             from geometry_harness.domains.architecture.agent_patch_gateway import validate_model_proposal
             for tid in ("arch_unknown_wall","arch_locked_wall"):
                 with self.subTest(tid=tid),self.assertRaises(CADPatchReject):
@@ -146,8 +155,10 @@ class EvidenceGateTests(unittest.TestCase):
                  patch("builtins.input", return_value="approve") as answer:
                 sin.isatty.return_value=True
                 sout.isatty.return_value=True
-                with self.assertRaisesRegex(CADPatchReject,"Host denied"):
-                    e5_execute(root,mode="commit",out=out)
+                with patch("geometry_harness.domains.architecture.e5_replay.verified_e3_bundle",
+                           side_effect=fake_integrity_for_test):
+                    with self.assertRaisesRegex(CADPatchReject,"Host denied"):
+                        e5_execute(root,mode="commit",out=out)
             self.assertFalse(out.exists())
             answer.assert_called_once()
 
@@ -160,7 +171,7 @@ class EvidenceGateTests(unittest.TestCase):
         with TemporaryDirectory() as tmp:
             root=make_fake(Path(tmp)/"private-e3")
             out=Path(tmp)/"committed"
-            preview=_read_only_review(verified_e3_bundle(root),
+            preview=_read_only_review(fake_integrity_for_test(root),
                                       operation_id="host_e5_1234567890abcdef")
             confirmation=("APPROVE "+preview["source_plan_sha256"][:12]+" "+
                           preview["candidate_plan_sha256"][:12]+" 9A9A9A9A")
@@ -171,7 +182,9 @@ class EvidenceGateTests(unittest.TestCase):
                  patch("builtins.input",return_value=confirmation):
                 sin.isatty.return_value=True
                 sout.isatty.return_value=True
-                result=e5_execute(root,mode="commit",out=out)
+                with patch("geometry_harness.domains.architecture.e5_replay.verified_e3_bundle",
+                           side_effect=fake_integrity_for_test):
+                    result=e5_execute(root,mode="commit",out=out)
             self.assertEqual(result["status"],"OPERATOR_TTY_CONFIRMED_DXF_REOPENED")
             self.assertTrue(result["operator_terminal_confirmed"])
             self.assertFalse(result["operator_identity_verified"])
@@ -190,8 +203,10 @@ class EvidenceGateTests(unittest.TestCase):
             data["model"]="another-model"
             (root/"protocol.json").write_text(json.dumps(data))
             rehash_manifest(root)
-            with self.assertRaisesRegex(E5EvidenceReject,"protocol"):
-                e5_execute(root,mode="inspect")
+            with patch("geometry_harness.domains.architecture.e5_replay.verified_e3_bundle",
+                       side_effect=fake_integrity_for_test):
+                with self.assertRaisesRegex(E5EvidenceReject,"protocol"):
+                    e5_execute(root,mode="inspect")
 
 if __name__=="__main__":
     unittest.main()
