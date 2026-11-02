@@ -43,6 +43,7 @@ jobs:
           python -m unittest discover -s tests -p 'test_architecture_plan_schema.py' -v
           python -m unittest discover -s tests -p 'test_architecture_geometry_math.py' -v
           python -m unittest discover -s tests -p 'test_architecture_dxf_transaction.py' -v
+          python -m unittest discover -s tests -p 'test_architecture_host_approved_transaction.py' -v
       - name: Independent synthetic annotated DXF W2 acceptance (zero inference)
         env:
           PYTHONPATH: src
