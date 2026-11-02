@@ -60,3 +60,20 @@ jobs:
           assert (out/"transaction"/"candidate.dxf").is_file()
           print("Real ezdxf synthetic E2E gate passed; no Blender or models")
           PY
+      - name: E4 synthetic host-approved proposal to verified DXF
+        env:
+          PYTHONPATH: src
+          GEOMETRY_ALLOW_REMOTE_INFERENCE: "0"
+        run: |
+          python -m geometry_harness.domains.architecture.e2e_host_approved --out "$RUNNER_TEMP/arch-mvp-e4-$GITHUB_RUN_ID"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root=Path(os.environ["RUNNER_TEMP"])/("arch-mvp-e4-"+os.environ["GITHUB_RUN_ID"])
+          data=json.loads((root/"e4-evidence.json").read_text())
+          assert data["status"]=="PASS_E4_SYNTHETIC_HOST_FIXTURE_DXF_REOPEN"
+          assert data["model_calls_this_run"]==0 and not data["human_approved"]
+          assert data["model_response_origin"]=="SYNTHETIC_JSON_FIXTURE_NOT_LIVE_QWEN"
+          assert data["source_unchanged"] and data["non_targets_unchanged"]
+          assert data["independent_dxf_reopen"] and data["rollback_present"]
+          PY
