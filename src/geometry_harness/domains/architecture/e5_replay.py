@@ -28,13 +28,13 @@ from .schema import plan_sha256
 def _sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
-def _read_only_review(data: dict) -> dict:
+def _read_only_review(data: dict, *, operation_id: str) -> dict:
     item = data["tasks"][TASK_ID]
     plan = item["plan"]
     resp = item["response"]
     # Frozen E3 target and correct 300mm translation required.
     validated = validate_model_proposal(plan, resp,
-                                         host_operation_id="host_e5_preview_001")
+                                         host_operation_id=operation_id)
     p = validated["patch"]
     if p["target_id"] != "door_001" or p["delta_mm"] != 300:
         raise E5EvidenceReject("Historical response is not expected bounded move")
@@ -83,7 +83,9 @@ def execute(bundle: Path, *, mode: str, out: Path | None = None) -> dict:
     if mode not in ("inspect", "commit"):
         raise E5EvidenceReject("Unknown E5 mode")
     data = verified_e3_bundle(bundle)
-    review = _read_only_review(data)
+    operation_id = ("host_e5_" + secrets.token_hex(8) if mode == "commit"
+                    else "host_e5_preview_001")
+    review = _read_only_review(data, operation_id=operation_id)
     if mode == "inspect":
         return review
     if out is None:
@@ -119,7 +121,7 @@ def execute(bundle: Path, *, mode: str, out: Path | None = None) -> dict:
         source.chmod(0o600)
         result = host_approved_dxf_transaction(
             source, item["response"], approve=interactive_approval,
-            host_operation_id="host_e5_" + secrets.token_hex(8),
+            host_operation_id=operation_id,
             out=destination,
         )
     if not consent["value"] or not consent["at"]:
