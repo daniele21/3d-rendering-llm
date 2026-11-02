@@ -45,6 +45,10 @@ def _read_only_review(data: dict, *, operation_id: str) -> dict:
         "historical_run_id_claim": data["historical_run_id_claim"],
         "source_integrity": data["status"],
         "read_source_authenticated": data["read_source_authenticated"],
+        "original_content_sha_anchor_verified": data.get(
+            "original_content_sha_anchor_verified", False),
+        "source_anchor_observation_run_id": data.get(
+            "source_anchor_observation_run_id"),
         "provider_full_gguf_digest_verified": False,
         "source_plan_sha256": plan_sha256(plan),
         "raw_model_response_sha256": item["response_sha256"],
@@ -134,6 +138,10 @@ def execute(bundle: Path, *, mode: str, out: Path | None = None) -> dict:
         "operator_terminal_confirmed": True,
         "operator_identity_verified": False,
         "source_gcs_authenticated_by_program": False,
+        "original_content_sha_anchor_verified": data.get(
+            "original_content_sha_anchor_verified", False),
+        "source_anchor_observation_run_id": data.get(
+            "source_anchor_observation_run_id"),
         "external_model_provenance_attested": False,
         "source_claim_run_id": data["historical_run_id_claim"],
         "source_claim_sha": data["expected_source_sha_claim"],
