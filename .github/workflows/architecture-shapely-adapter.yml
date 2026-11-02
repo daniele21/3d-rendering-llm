@@ -1,0 +1,33 @@
+name: Architecture C1 pinned Shapely topology
+on:
+  push:
+    branches: [feature/architecture-c1-shapely-validator]
+  pull_request:
+    paths:
+      - "src/geometry_harness/domains/architecture/topology_shapely.py"
+      - "tests/test_architecture_topology_shapely.py"
+      - ".github/workflows/architecture-shapely-adapter.yml"
+permissions:
+  contents: read
+jobs:
+  actual-shapely:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install pinned open-source geometry engine
+        run: |
+          python -m pip install --disable-pip-version-check 'shapely==2.1.2'
+          python -c 'import shapely; assert shapely.__version__=="2.1.2"'
+      - name: Independent actual GEOS topology and schema gates
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m unittest discover -s tests -p 'test_architecture_topology_shapely.py' -v
+          python -m unittest discover -s tests -p 'test_architecture_geometry_math.py' -v
+          python -m unittest discover -s tests -p 'test_architecture_plan_schema.py' -v
