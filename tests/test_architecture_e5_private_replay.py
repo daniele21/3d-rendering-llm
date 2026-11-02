@@ -151,6 +151,38 @@ class EvidenceGateTests(unittest.TestCase):
             self.assertFalse(out.exists())
             answer.assert_called_once()
 
+    @unittest.skipUnless(__import__("importlib").util.find_spec("ezdxf") is not None,
+                         "Real DXF positive integration runs in pinned ezdxf CI")
+    def test_simulated_terminal_confirmation_roundtrip(self):
+        """Only a MOCK terminal in CI; never evidence of real human approval."""
+        from geometry_harness.domains.architecture.e5_replay import _read_only_review
+        from geometry_harness.domains.architecture.dxf_revision import import_verified_plan_dxf
+        with TemporaryDirectory() as tmp:
+            root=make_fake(Path(tmp)/"private-e3")
+            out=Path(tmp)/"committed"
+            preview=_read_only_review(verified_e3_bundle(root),
+                                      operation_id="host_e5_1234567890abcdef")
+            confirmation=("APPROVE "+preview["source_plan_sha256"][:12]+" "+
+                          preview["candidate_plan_sha256"][:12]+" 9A9A9A9A")
+            with patch("geometry_harness.domains.architecture.e5_replay.secrets.token_hex",
+                       side_effect=["1234567890abcdef","9a9a9a9a"]), \
+                 patch("geometry_harness.domains.architecture.e5_replay.sys.stdin") as sin, \
+                 patch("geometry_harness.domains.architecture.e5_replay.sys.stdout") as sout, \
+                 patch("builtins.input",return_value=confirmation):
+                sin.isatty.return_value=True
+                sout.isatty.return_value=True
+                result=e5_execute(root,mode="commit",out=out)
+            self.assertEqual(result["status"],"OPERATOR_TTY_CONFIRMED_DXF_REOPENED")
+            self.assertTrue(result["operator_terminal_confirmed"])
+            self.assertFalse(result["operator_identity_verified"])
+            self.assertFalse(result["source_gcs_authenticated_by_program"])
+            self.assertFalse(result["external_model_provenance_attested"])
+            after=import_verified_plan_dxf(out/"transaction"/"candidate.dxf")
+            self.assertEqual(after["openings"][0]["offset_mm"],1500)
+            self.assertEqual(result["candidate_plan_sha256"],
+                             preview["candidate_plan_sha256"])
+            self.assertTrue((out/"transaction"/"rollback-plan.json").is_file())
+
     def test_invalid_modelled_source_file_never_approved(self):
         with TemporaryDirectory() as tmp:
             root=make_fake(Path(tmp)/"private-e3")
